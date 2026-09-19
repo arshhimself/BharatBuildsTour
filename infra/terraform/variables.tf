@@ -13,6 +13,12 @@ variable "my_ip_cidr" {
   type        = string
 }
 
+variable "agent_sandbox_ip_cidr" {
+  description = "Temporary CIDR for an assistant sandbox's dynamic egress IP, direct Postgres access."
+  type        = string
+  default     = "0.0.0.0/32"
+}
+
 variable "container_port" {
   type    = number
   default = 8000
@@ -106,6 +112,12 @@ variable "whatsapp_biz_verify_token" {
 variable "whatsapp_app_secret" {
   type      = string
   sensitive = true
+}
+
+variable "whatsapp_test_app_secret" {
+  type      = string
+  sensitive = true
+  default   = ""
 }
 
 variable "whatsapp_test_phone_number_id" {

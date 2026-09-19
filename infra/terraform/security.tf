@@ -77,6 +77,14 @@ resource "aws_security_group" "rds" {
     cidr_blocks = [var.my_ip_cidr]
   }
 
+  ingress {
+    description = "Agent sandbox access (temporary, dynamic egress IP)"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = [var.agent_sandbox_ip_cidr]
+  }
+
   # Live EC2 instance not managed by this config (see the `hermes_*` outputs).
   # Restated here so plans stop proposing to revoke its DB access.
   ingress {
