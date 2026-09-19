@@ -50,7 +50,11 @@ class Settings(BaseSettings):
     invoice_artifact_root: str = "artifacts"
     public_artifact_base_url: str = ""
     openai_api_key: SecretStr = SecretStr("")
-    jwt_secret: SecretStr
+    jwt_secret: SecretStr = SecretStr("demo-jwt-secret")
+    instagram_access_token: SecretStr = SecretStr("")
+    instagram_user_id: str = ""
+    instagram_api_version: str = "v26.0"
+    instagram_graph_url: str = "https://graph.instagram.com"
 
     @model_validator(mode="after")
     def reject_placeholder_password(self) -> "Settings":

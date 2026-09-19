@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """Real, read-only tools the Manager agent can call.
 
 Every tool here only reads and returns actual data -- run status, stock,
@@ -28,6 +30,7 @@ from app.modules.runs.agent_team import (
 from app.modules.runs.models import Run
 from app.modules.runs.repository import get_run_by_run_id, get_timeline, list_runs
 from app.modules.runs.state_machine import RunStatus
+from app.modules.social import service as social_service
 from app.modules.whatsapp.models import WhatsAppMessage
 
 
@@ -47,6 +50,21 @@ class ActiveConversationsInput(BaseModel):
     hours: int = Field(
         default=24,
         description="How many hours back to count. Defaults to 24.",
+    )
+
+
+class InstagramPostInput(BaseModel):
+    image_url: str = Field(
+        ...,
+        description="The public HTTP/HTTPS image URL to post on Instagram.",
+    )
+    caption: str = Field(
+        ...,
+        description="The main caption text for the Instagram post.",
+    )
+    hashtags: list[str] = Field(
+        default_factory=list,
+        description="Optional list of hashtags, e.g. ['#fashion', '#newcollection'].",
     )
 
 
@@ -633,5 +651,16 @@ def build_tools(db: Session) -> list[StructuredTool]:
                 "Preview how Daily Summary and Audit agents coordinate on today's summary. "
                 "Read-only; does not mutate reminders, approvals, or runs."
             ),
+        ),
+        StructuredTool.from_function(
+            func=lambda image_url, caption, hashtags=None: social_service.publish_instagram_post(
+                image_url=image_url, caption=caption, hashtags=hashtags, db=db
+            ),
+            name="publish_instagram_post",
+            description=(
+                "Create and publish a public Instagram post on behalf of the business with image, "
+                "caption, and optional hashtags. Owned by the Social Media Agent."
+            ),
+            args_schema=InstagramPostInput,
         ),
     ]

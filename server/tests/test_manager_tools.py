@@ -63,6 +63,7 @@ def test_manager_tool_catalog_contains_only_expected_read_tools() -> None:
         "get_mvp_team",
         "preview_commerce_agent_conversation",
         "preview_daily_summary_agent_conversation",
+        "publish_instagram_post",
     }
 
 
