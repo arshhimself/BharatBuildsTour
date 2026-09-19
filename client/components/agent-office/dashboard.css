@@ -1,10 +1,10 @@
 .dashboard-office-section {
   margin: 22px 0;
   overflow: hidden;
-  border: 1px solid #ffffff14;
+  border: 1px solid var(--wa-line);
   border-radius: 18px;
-  background: #070b10;
-  box-shadow: 0 20px 55px #00000025;
+  background: var(--wa-surface);
+  box-shadow: var(--wa-shadow);
 }
 
 .dashboard-office-heading {
@@ -13,20 +13,20 @@
   justify-content: space-between;
   gap: 16px;
   padding: 20px 22px 16px;
-  border-bottom: 1px solid #ffffff0d;
-  background: #0b1119;
+  border-bottom: 1px solid var(--wa-line);
+  background: #F8FBF9;
 }
 
 .dashboard-office-heading h2 {
   margin: 0;
-  color: #f8fafc;
+  color: var(--wa-ink);
   font-size: 20px;
   letter-spacing: -0.04em;
 }
 
 .dashboard-office-heading p:not(.eyebrow) {
   margin: 5px 0 0;
-  color: #94a3b8;
+  color: var(--wa-ink-2);
   font-size: 12px;
 }
 

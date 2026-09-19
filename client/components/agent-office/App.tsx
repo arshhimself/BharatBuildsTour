@@ -83,10 +83,6 @@ function timeNow(): string {
 let nextMsgId = 1
 function makeMsgId() { return nextMsgId++ }
 
-function isInternalAgentMessage(text: string): boolean {
-  return text.trim().toLowerCase().includes('parsed line items')
-}
-
 // Room spots for main office
 const MAIN_ROOM = ROOMS['main-office']
 const ENTRY = MAIN_ROOM.entryPoint           // door position (%)
@@ -550,7 +546,6 @@ const App: React.FC<AgentOfficeProps> = ({ fullscreen = false }) => {
     text: string,
     isSystem = false,
   ) => {
-    if (isInternalAgentMessage(text)) return
     setMessages(prev => [...prev.slice(-50), {
       id: makeMsgId(),
       sender,
@@ -1027,11 +1022,10 @@ const App: React.FC<AgentOfficeProps> = ({ fullscreen = false }) => {
   const fallbackFiredRef = useRef(false)
 
   const scheduleNewAgentEvents = useCallback((events: AgentSimulationEvent[]) => {
-    const visibleEvents = events.filter(event => !isInternalAgentMessage(event.message))
     const already = scheduledCountRef.current
-    const tail = visibleEvents.slice(already)
+    const tail = events.slice(already)
     if (tail.length === 0) return
-    scheduledCountRef.current = visibleEvents.length
+    scheduledCountRef.current = events.length
 
     scheduleMockEvents(tail, 4000).forEach(scheduled => {
       const visualEvent = toAgentVisualEvent(scheduled.event)
@@ -1078,9 +1072,8 @@ const App: React.FC<AgentOfficeProps> = ({ fullscreen = false }) => {
         const events = await getRunAgentEvents(runId)
         if (cancelled || events.length === 0) return
         const sorted = [...events].sort((a, b) => a.timestamp.localeCompare(b.timestamp))
-        const visibleEvents = sorted.filter(event => !isInternalAgentMessage(event.message))
-        setAgentEvents(visibleEvents)
-        scheduleNewAgentEvents(visibleEvents)
+        setAgentEvents(sorted)
+        scheduleNewAgentEvents(sorted)
       } catch {
         // Network hiccup / no runs yet / auth issue — try again next tick, or fall
         // back to the fixture below if nothing real ever shows up.

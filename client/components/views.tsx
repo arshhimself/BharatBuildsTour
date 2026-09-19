@@ -85,7 +85,6 @@ import {
   formatTime,
   humanize,
 } from '@/lib/format'
-
 // ---------------------------------------------------------------------------
 // Presentation helpers (status labels and tones only; no business decisions)
 // ---------------------------------------------------------------------------
@@ -100,7 +99,7 @@ const CLOSED_RUN_STATUSES = new Set([
   'PAYMENT_EXPIRED',
 ])
 
-/** Map a backend status string to a `status-pill` tone. Display only. */
+/** Map a backend status string to a status-pill tone. Display only. */
 function statusTone(status: string): string {
   switch (status) {
     case 'INVOICED':
@@ -109,9 +108,9 @@ function statusTone(status: string): string {
     case 'PAYMENT_CONFIRMED':
     case 'INVOICE_GENERATED':
     case 'GENERATED':
-      return 'green'
     case 'ACCEPTED':
-      return 'violet'
+      return 'green'
+
     case 'APPROVAL_PENDING':
     case 'WAITING_FOR_CLARIFICATION':
     case 'NEEDS_CLARIFICATION':
@@ -124,12 +123,14 @@ function statusTone(status: string): string {
     case 'PAYMENT_LINK_SENT':
     case 'PENDING_ARTIFACT':
       return 'amber'
+
     case 'RECEIVED':
     case 'NORMALIZING':
     case 'CHECKING_STOCK':
     case 'CHECKING_PRICE':
     case 'DRAFT':
-      return 'blue'
+      return 'muted'
+
     case 'REJECTED':
     case 'EXPIRED':
     case 'PAYMENT_FAILED':
@@ -139,6 +140,7 @@ function statusTone(status: string): string {
     case 'OUT_OF_STOCK':
     case 'INSUFFICIENT_STOCK':
       return 'red'
+
     default:
       return 'muted'
   }
@@ -157,19 +159,37 @@ function isOpenRun(status: string): boolean {
 
 /** Low stock is `stock <= threshold`; both values come from the backend. */
 function isLowStock(product: ProductRecord): boolean {
-  return typeof product.stock === 'number' && typeof product.threshold === 'number' && product.stock <= product.threshold
+  return (
+    typeof product.stock === 'number' &&
+    typeof product.threshold === 'number' &&
+    product.stock <= product.threshold
+  )
 }
 
-function stockLabel(product: ProductRecord): 'Low stock' | 'Healthy' | 'Unavailable' {
-  if (typeof product.stock !== 'number' || typeof product.threshold !== 'number') return 'Unavailable'
+function stockLabel(
+  product: ProductRecord,
+): 'Low stock' | 'Healthy' | 'Unavailable' {
+  if (
+    typeof product.stock !== 'number' ||
+    typeof product.threshold !== 'number'
+  ) {
+    return 'Unavailable'
+  }
+
   return isLowStock(product) ? 'Low stock' : 'Healthy'
 }
 
 /** Tone for a timeline event derived from its backend event type. */
 function eventTone(type: string): string {
-  if (/FAIL|SHORTAGE|REJECT|CLARIFICATION|EXPIRED/.test(type)) return 'amber'
-  if (/PAYMENT|INVOICE|ACCEPTED/.test(type)) return 'green'
-  return 'blue'
+  if (/FAIL|SHORTAGE|REJECT|CLARIFICATION|EXPIRED/.test(type)) {
+    return 'amber'
+  }
+
+  if (/PAYMENT|INVOICE|ACCEPTED/.test(type)) {
+    return 'green'
+  }
+
+  return 'muted'
 }
 
 function eventState(tone: string): string {
@@ -178,7 +198,9 @@ function eventState(tone: string): string {
   return 'Recorded'
 }
 
-function combineSources(sources: Array<DataSource | undefined>): DataSource {
+function combineSources(
+  sources: Array<DataSource | undefined>,
+): DataSource {
   return sources.some((source) => source === 'mock') ? 'mock' : 'backend'
 }
 
@@ -204,7 +226,6 @@ const RUN_STAGE: Record<string, number> = {
   INVOICED: 9,
   ORDER_CONFIRMED: 10,
 }
-
 // ---------------------------------------------------------------------------
 // Shared state blocks
 // ---------------------------------------------------------------------------
@@ -226,8 +247,8 @@ export function StateBlock({
   if (loading) {
     return (
       <div className="panel">
-        <div className="flex items-center gap-3 text-sm text-slate-400">
-          <Activity className="size-4 animate-spin text-indigo-400" />
+        <div className="flex items-center gap-3 text-sm text-[#54656F]">
+          <Activity className="size-4 animate-spin text-[#128C7E]" />
           <span>Loading from the backend...</span>
         </div>
       </div>
@@ -238,10 +259,10 @@ export function StateBlock({
     return (
       <div className="panel">
         <div className="flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 size-5 text-rose-400" />
+          <AlertTriangle className="mt-0.5 size-5 text-[#EA4335]" />
           <div className="min-w-0">
-            <h3 className="text-white">Could not load this view</h3>
-            <p className="mt-1 text-sm text-slate-400">{errorMessage}</p>
+            <h3 className="text-[#111B21]">Could not load this view</h3>
+            <p className="mt-1 text-sm text-[#54656F]">{errorMessage}</p>
             {onRetry && (
               <button className="btn btn-secondary mt-4" type="button" onClick={onRetry}>
                 Retry
@@ -256,8 +277,8 @@ export function StateBlock({
   if (empty) {
     return (
       <div className="panel">
-        <div className="flex items-center gap-3 text-sm text-slate-400">
-          <CircleDot className="size-4 text-slate-500" />
+        <div className="flex items-center gap-3 text-sm text-[#54656F]">
+          <CircleDot className="size-4 text-[#667781]" />
           <span>{emptyMessage ?? 'Nothing here yet.'}</span>
         </div>
       </div>
@@ -290,7 +311,7 @@ export function SourceBadge({
 function LiveTimeline({ events, limit }: { events: DemoEvent[]; limit?: number }) {
   const rows = typeof limit === 'number' ? events.slice(0, limit) : events
   if (rows.length === 0) {
-    return <p className="text-sm text-slate-400">No events recorded yet.</p>
+    return <p className="text-sm text-[#54656F]">No events recorded yet.</p>
   }
   return (
     <div className="timeline">
@@ -580,7 +601,7 @@ export function DashboardView() {
               <StatusPill tone="amber">{formatCount(alerts.length)} open</StatusPill>
             </div>
             {alerts.length === 0 ? (
-              <p className="mt-4 text-xs text-slate-400">Nothing needs you right now.</p>
+              <p className="mt-4 text-xs text-[#54656F]">Nothing needs you right now.</p>
             ) : (
               alerts.slice(0, 4).map((alert) => (
                 <div className="alert-item" key={alert.id}>
@@ -592,13 +613,13 @@ export function DashboardView() {
                 </div>
               ))
             )}
-            <Link href="/approvals" className="mt-3 flex items-center gap-1 text-xs text-indigo-300">
+            <Link href="/approvals" className="mt-3 flex items-center gap-1 text-xs text-[#128C7E]">
               Review all <ArrowRight className="size-3" />
             </Link>
           </div>
           <div className="rail-card">
             <h3>Manager digest</h3>
-            <div className="mt-4 flex flex-col gap-3 text-xs text-slate-400">
+            <div className="mt-4 flex flex-col gap-3 text-xs text-[#54656F]">
               <span>{formatCount(approvals.length)} quotes waiting for review</span>
               <span>{formatCount(pendingPayments.length)} payments need follow-up</span>
               <span>{formatCount(lowStock.length)} items below reorder threshold</span>
@@ -615,15 +636,15 @@ export function DashboardView() {
         <div className="panel dashboard-data-panel">
           <div className="dashboard-panel-header"><div><p className="eyebrow">INVENTORY SIGNAL</p><h3>Low stock radar</h3></div><Package className="dashboard-panel-icon" /></div>
           <div className="flex items-center gap-5 py-5">
-            <div className="grid size-24 place-items-center rounded-full border-[10px] border-amber-400/30 border-t-amber-400 text-2xl font-semibold">
+            <div className="grid size-24 place-items-center rounded-full border-[10px] border-[#F7B731]/30 border-t-[#F7B731] text-2xl font-semibold">
               {formatCount(lowStock.length)}
             </div>
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-[#54656F]">
               Items below
               <br />
-              <b className="text-white">reorder threshold</b>
+              <b className="text-[#111B21]">reorder threshold</b>
               <br />
-              <Link href="/inventory" className="mt-2 inline-block text-indigo-300">
+              <Link href="/inventory" className="mt-2 inline-block text-[#128C7E]">
                 View inventory →
               </Link>
             </div>
@@ -634,7 +655,7 @@ export function DashboardView() {
           {latestInvoice ? (
             <>
               <div className="mt-3 flex items-center justify-between">
-                <span className="mono text-xs text-slate-300">{latestInvoice.invoice_number}</span>
+                <span className="mono text-xs text-[#54656F]">{latestInvoice.invoice_number}</span>
                 <StatusPill tone={statusTone(latestInvoice.status)}>
                   {humanize(latestInvoice.status)}
                 </StatusPill>
@@ -642,16 +663,16 @@ export function DashboardView() {
               <strong className="mt-3 block text-2xl tracking-[-.04em]">
                 {formatINR(latestInvoice.total_paise)}
               </strong>
-              <small className="text-slate-500">{formatShortDate(latestInvoice.issued_at)}</small>
+              <small className="text-[#667781]">{formatShortDate(latestInvoice.issued_at)}</small>
               <Link
                 href={`/invoices/${latestInvoice.invoice_id}`}
-                className="mt-3 flex text-xs text-indigo-300"
+                className="mt-3 flex text-xs text-[#128C7E]"
               >
                 Open invoice <ArrowRight className="size-3" />
               </Link>
             </>
           ) : (
-            <p className="mt-3 text-xs text-slate-400">No invoices issued yet.</p>
+            <p className="mt-3 text-xs text-[#54656F]">No invoices issued yet.</p>
           )}
         </div>
       </div>
@@ -702,7 +723,7 @@ export function RunsView() {
     const matched = run.lines.filter((line) => line.match_status === 'MATCHED').length
     const short = run.lines.filter((line) => line.stock_status === 'INSUFFICIENT').length
     return [
-      <Link className="mono text-indigo-300" href={`/runs/${run.id}`} key="id">
+      <Link className="mono text-[#128C7E]" href={`/runs/${run.id}`} key="id">
         {run.id}
       </Link>,
       run.buyer_name,
@@ -819,19 +840,19 @@ export function RunDetailView({ id }: { id: string }) {
                 <p className="eyebrow">EVENT LOG</p>
                 <h2>Run timeline</h2>
               </div>
-              <span className="mono text-xs text-slate-500">
+              <span className="mono text-xs text-[#667781]">
                 {formatCount(events.length)} events · live
               </span>
             </div>
 
             {timelineResource.status === 'error' ? (
-              <p className="text-sm text-rose-300">
+              <p className="text-sm text-[#B3261E]">
                 Timeline unavailable: {timelineResource.error?.message}
               </p>
             ) : timelineResource.status === 'loading' ? (
-              <p className="text-sm text-slate-400">Loading timeline...</p>
+              <p className="text-sm text-[#54656F]">Loading timeline...</p>
             ) : events.length === 0 ? (
-              <p className="text-sm text-slate-400">No events recorded for this run yet.</p>
+              <p className="text-sm text-[#54656F]">No events recorded for this run yet.</p>
             ) : (
               <div className="event-log">
                 {events.map((event, index) => {
@@ -944,7 +965,7 @@ export function ApprovalsView() {
   }
 
   const rows: ReactNode[][] = (resource.data ?? []).map((row) => [
-    <span className="mono text-indigo-300" key="id">
+    <span className="mono text-[#128C7E]" key="id">
       {row.runId}
     </span>,
     row.buyer,
@@ -990,12 +1011,12 @@ export function ApprovalsView() {
       />
       {decide.error && (
         <div className="panel mb-4">
-          <p className="text-sm text-rose-300">Approval action failed: {decide.error.message}</p>
+          <p className="text-sm text-[#B3261E]">Approval action failed: {decide.error.message}</p>
         </div>
       )}
       {outcome && (
         <div className="panel mb-4">
-          <p className="text-sm text-emerald-300">{outcome}</p>
+          <p className="text-sm text-[#176B45]">{outcome}</p>
         </div>
       )}
       <StateBlock
@@ -1042,12 +1063,12 @@ export function InventoryView() {
 
   const rows: ReactNode[][] = products.map((product) => [
     <span key="name">
-      <Link href={`/inventory/${product.sku}`} className="font-medium hover:text-indigo-400">
+      <Link href={`/inventory/${product.sku}`} className="font-medium hover:text-[#128C7E]">
         {product.name}
       </Link>
       <small>{product.sellable_unit ?? product.unit ?? 'unit unavailable'}</small>
     </span>,
-    <span className="mono text-slate-400" key="sku">
+    <span className="mono text-[#667781]" key="sku">
       {product.sku}
     </span>,
     <div className="stock-cell" key="stock">
@@ -1056,7 +1077,7 @@ export function InventoryView() {
         <i style={{ width: stockBarWidth(product) }} />
       </div>
     </div>,
-    <span className="mono text-slate-400" key="threshold">
+    <span className="mono text-[#667781]" key="threshold">
               {typeof product.threshold === 'number' ? formatCount(product.threshold) : '—'}
     </span>,
     '—',
@@ -1080,7 +1101,7 @@ export function InventoryView() {
         }
       />
       <div className="mb-4 flex gap-3">
-        <div className="flex flex-1 items-center gap-2 rounded-xl border border-white/10 bg-[#101826] px-3 text-slate-400">
+        <div className="flex flex-1 items-center gap-2 rounded-xl border border-[#D1D7DB] bg-white px-3 text-[#54656F] shadow-sm">
           <Search className="size-4" />
           <input
             className="w-full bg-transparent py-3 outline-none"
@@ -1218,7 +1239,7 @@ export function QuotesView() {
   )
 
   const rows: ReactNode[][] = (resource.data?.quotes ?? []).map((quote) => [
-    <Link className="mono text-indigo-300" href={`/quotes/${quote.run_id}`} key="id">
+    <Link className="mono text-[#128C7E]" href={`/quotes/${quote.run_id}`} key="id">
       {quote.quote_id}
     </Link>,
     resource.data?.buyerByRun[quote.run_id] ?? quote.run_id,
@@ -1286,10 +1307,10 @@ export function PaymentsView() {
   )
 
   const rows: ReactNode[][] = (resource.data?.payments ?? []).map((payment) => [
-    <Link className="mono text-indigo-300" href={`/payments/${payment.payment_id}`} key="id">
+    <Link className="mono text-[#128C7E]" href={`/payments/${payment.payment_id}`} key="id">
       {payment.payment_id}
     </Link>,
-    <span className="mono text-slate-400" key="run">
+    <span className="mono text-[#667781]" key="run">
       {payment.run_id}
     </span>,
     resource.data?.buyerByRun[payment.run_id] ?? '—',
@@ -1355,10 +1376,10 @@ export function InvoicesView() {
   )
 
   const rows: ReactNode[][] = (resource.data?.invoices ?? []).map((invoice) => [
-    <Link className="mono text-indigo-300" href={`/invoices/${invoice.invoice_id}`} key="id">
+    <Link className="mono text-[#128C7E]" href={`/invoices/${invoice.invoice_id}`} key="id">
       {invoice.invoice_id}
     </Link>,
-    <span className="mono text-slate-400" key="run">
+    <span className="mono text-[#667781]" key="run">
       {invoice.run_id}
     </span>,
     resource.data?.buyerByRun[invoice.run_id] ?? '—',
@@ -1437,7 +1458,7 @@ export function BuyerQuoteView({ id }: { id: string }) {
       <div className="buyer-card">
         <StatusPill tone={statusTone(run.quote.status)}>{humanize(run.quote.status)}</StatusPill>
         <h1>Quote #{run.quote.id}</h1>
-        <p className="text-slate-500">
+        <p className="text-[#54656F]">
           Prepared for {run.buyer_name} · Valid until {formatShortDate(run.quote.expires_at)}
         </p>
         <h2>Items</h2>
@@ -1446,7 +1467,7 @@ export function BuyerQuoteView({ id }: { id: string }) {
             <div className="buyer-item" key={`${line.requested_name}-${index}`}>
               <span>
                 {line.product_name ?? line.requested_name}
-                <small className="block text-slate-500">
+                <small className="block text-[#667781]">
                   {formatCount(line.quantity)} × {formatINR(line.unit_price_paise)}
                 </small>
               </span>
@@ -1464,16 +1485,16 @@ export function BuyerQuoteView({ id }: { id: string }) {
             <b>{formatINR(run.quote.total_paise)}</b>
           </div>
         </div>
-        <div className="rounded-xl bg-slate-50 p-4 text-sm">
+        <div className="rounded-xl bg-[#F0F2F5] p-4 text-sm">
           <b>Buyer contact</b>
-          <p className="m-0 mt-1 text-slate-500">{run.buyer_phone}</p>
-          <p className="m-0 mt-2 text-xs text-slate-500">
+          <p className="m-0 mt-1 text-[#54656F]">{run.buyer_phone}</p>
+          <p className="m-0 mt-2 text-xs text-[#54656F]">
             Tax and final totals are decided by the backend; the workflow store does not break out GST.
           </p>
         </div>
 
         {link.error && (
-          <p className="mt-4 text-sm text-rose-500">Could not create link: {link.error.message}</p>
+          <p className="mt-4 text-sm text-[#B3261E]">Could not create link: {link.error.message}</p>
         )}
 
         <div className="buyer-actions">
@@ -1511,7 +1532,7 @@ export function BuyerQuoteView({ id }: { id: string }) {
         )}
 
         {payment && (
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-[#54656F]">
             Payment link: <span className="mono">{payment.url || 'Provider URL unavailable'}</span>
           </p>
         )}
@@ -1565,16 +1586,16 @@ export function BuyerPaymentView({ id }: { id: string }) {
       <div className="buyer-card">
         <StatusPill tone={statusTone(payment.status)}>{humanize(payment.status)}</StatusPill>
         <h1>Complete payment</h1>
-        <p className="text-slate-500">
+        <p className="text-[#54656F]">
           {payment.run_id} · {payment.currency}
         </p>
         <div className="my-8 text-center">
-          <p className="text-sm text-slate-500">Amount due</p>
+          <p className="text-sm text-[#54656F]">Amount due</p>
           <strong className="text-5xl tracking-[-.08em]">{formatINR(payment.amount_paise)}</strong>
         </div>
 
         {invoice.error && (
-          <p className="text-sm text-rose-500">Invoice failed: {invoice.error.message}</p>
+          <p className="text-sm text-[#B3261E]">Invoice failed: {invoice.error.message}</p>
         )}
 
         <button
@@ -1587,12 +1608,12 @@ export function BuyerPaymentView({ id }: { id: string }) {
         >
           {paid ? 'Payment confirmed' : 'Pay now'} <ArrowRight />
         </button>
-        <p className="mt-4 text-center text-xs text-slate-400">
+        <p className="mt-4 text-center text-xs text-[#667781]">
           Secure payment powered by Razorpay
         </p>
 
         {invoiceId ? (
-          <Link href={`/invoice/${invoiceId}`} className="mt-7 block text-center text-sm text-indigo-500">
+          <Link href={`/invoice/${invoiceId}`} className="mt-7 block text-center text-sm text-[#128C7E]">
             View invoice
           </Link>
         ) : (
@@ -1612,7 +1633,7 @@ export function BuyerPaymentView({ id }: { id: string }) {
         )}
 
         {payment.payment_url && (
-          <p className="mt-3 text-center text-xs text-slate-400">
+          <p className="mt-3 text-center text-xs text-[#667781]">
             Link: <span className="mono">{payment.payment_url}</span>
           </p>
         )}
@@ -1653,7 +1674,7 @@ export function BuyerInvoiceView({ id }: { id: string }) {
       <div className="buyer-card">
         <StatusPill tone={statusTone(invoice.status)}>{humanize(invoice.status)}</StatusPill>
         <h1>Invoice {invoice.invoice_number}</h1>
-        <p className="text-slate-500">
+        <p className="text-[#54656F]">
           {invoice.run_id} · Issued {formatShortDate(invoice.issued_at)}
         </p>
         <div className="mt-7">
@@ -1711,7 +1732,7 @@ export function BuyerInvoiceView({ id }: { id: string }) {
           </button>
         </div>
         {download.error && (
-          <p className="mt-4 text-xs text-slate-400">
+          <p className="mt-4 text-xs text-[#54656F]">
             Artifact download unavailable: {download.error.message}
           </p>
         )}

@@ -129,9 +129,7 @@ const SlackChat: React.FC<SlackChatProps> = ({ messages, muted, volume, onToggle
     }
   }, [messages, typingUser])
 
-  const displayed = messages
-    .filter(message => !message.text.trim().toLowerCase().includes('parsed line items'))
-    .slice(-12)
+  const displayed = messages.slice(-12)
   const onlineCount = new Set(messages.slice(-20).filter(m => !m.isSystem).map(m => m.sender)).size
   const sendCurrentMessage = useCallback(() => {
     const trimmed = inputText.trim()
