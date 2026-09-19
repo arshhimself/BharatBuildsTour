@@ -3,17 +3,16 @@
 import hashlib
 import hmac
 import json
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from langchain_core.messages import AIMessage
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.main import app
-from app.modules.commerce import service as commerce_service
 from app.modules.identity.models import Business, Buyer
 from app.modules.runs import service as runs_service
 from app.modules.runs.conversation_graph import load_conversation_history
@@ -90,8 +89,6 @@ def test_signed_webhook_commerce_a_to_g(pg_session: Session, monkeypatch) -> Non
 
     sent: list[dict] = []
     owner_calls: list[str] = []
-    agent_calls: list[tuple[str, list[str]]] = []
-    tool_results: list[object] = []
 
     async def no_read(*args, **kwargs):
         return None
@@ -104,44 +101,9 @@ def test_signed_webhook_commerce_a_to_g(pg_session: Session, monkeypatch) -> Non
         owner_calls.append(text)
         return [runs_service.OutboundMessage(to=wa_id, text="owner-only reply")]
 
-    class FakeAgent:
-        def __init__(self, tools):
-            self.tools = {tool.name: tool for tool in tools}
-
-        def invoke(self, state):
-            messages = state["messages"]
-            current = str(messages[-1].content)
-            agent_calls.append((current, [str(m.content) for m in messages[:-1]]))
-            if "LED" in current:
-                products = self.tools["search_products"].invoke({"query": "LED"})
-                tool_results.append(products)
-                assert products and all(p["sku"].startswith("LED-") for p in products)
-                assert all("price_paise" in p and "gst_rate_bps" in p for p in products)
-                response = products[0]["name"]
-            elif "stock" in current:
-                products = self.tools["search_products"].invoke({"query": "LED"})
-                fact = self.tools["check_inventory"].invoke(
-                    {"product_id": products[0]["id"], "requested_qty": 1}
-                )
-                tool_results.append(fact)
-                assert fact["status"] in {
-                    "AVAILABLE",
-                    "LOW_STOCK",
-                    "INSUFFICIENT_STOCK",
-                    "OUT_OF_STOCK",
-                }
-                response = fact["status"]
-            else:
-                response = "How can I help?"
-            return {"messages": [*messages, AIMessage(content=response)]}
-
     monkeypatch.setattr(whatsapp_client, "mark_read_with_typing", no_read)
     monkeypatch.setattr(whatsapp_client, "send_message", fake_send)
     monkeypatch.setattr(runs_service, "process_admin_message", fake_owner)
-    monkeypatch.setattr(commerce_service, "ChatOpenAI", lambda **kwargs: object())
-    monkeypatch.setattr(
-        commerce_service, "create_react_agent", lambda model, tools, prompt: FakeAgent(tools)
-    )
     monkeypatch.setattr(audio, "synthesize", lambda text: None)
     app.dependency_overrides[get_db] = lambda: pg_session
 
@@ -151,6 +113,32 @@ def test_signed_webhook_commerce_a_to_g(pg_session: Session, monkeypatch) -> Non
             def post(phone: str, mid: str, text: str):
                 raw, headers = _signed(phone, mid, text)
                 return http.post("/webhook/whatsapp", content=raw, headers=headers)
+
+            def commerce_contexts():
+                messages = pg_session.scalars(
+                    select(WhatsAppMessage).where(
+                        WhatsAppMessage.direction == "out",
+                        WhatsAppMessage.phone_number_id == "number-b",
+                        WhatsAppMessage.business_id == DEMO_BUSINESS_ID,
+                    )
+                )
+                return [
+                    context
+                    for message in messages
+                    if isinstance(context := (message.payload or {}).get("commerce_context"), dict)
+                ]
+
+            def stamp_search(query: str, second: int):
+                for message in pg_session.scalars(
+                    select(WhatsAppMessage).where(WhatsAppMessage.direction == "out")
+                ):
+                    context = (message.payload or {}).get("commerce_context")
+                    if isinstance(context, dict) and context.get("tool_call") == {
+                        "name": "search_products",
+                        "arguments": {"query": query},
+                    }:
+                        message.created_at = datetime(2026, 1, 1, 0, 0, second, tzinfo=UTC)
+                pg_session.flush()
 
             # A: Number B creates one tenant-scoped lead and searches real catalog.
             assert post("number-b", "wamid.a", "LED chahiye").status_code == 200
@@ -162,13 +150,19 @@ def test_signed_webhook_commerce_a_to_g(pg_session: Session, monkeypatch) -> Non
                 )
             )
             assert len(buyers) == 1 and buyers[0].is_customer is False
-            assert len(agent_calls) == 1 and len(tool_results) == 1
-            assert agent_calls[0][1] == []
+            assert {
+                "name": "search_products",
+                "arguments": {"query": "led"},
+            } in [context["tool_call"] for context in commerce_contexts()]
+            stamp_search("led", 1)
 
             # B: Follow-up reuses the Buyer and sees only this scoped conversation.
             assert post("number-b", "wamid.b", "12 watt wala").status_code == 200
-            assert len(agent_calls) == 2
-            assert "LED chahiye" in agent_calls[-1][1]
+            assert {
+                "name": "search_products",
+                "arguments": {"query": "12 watt"},
+            } in [context["tool_call"] for context in commerce_contexts()]
+            stamp_search("12 watt", 2)
             assert (
                 len(
                     list(
@@ -185,8 +179,12 @@ def test_signed_webhook_commerce_a_to_g(pg_session: Session, monkeypatch) -> Non
 
             # C: Stock is read from the real tenant inventory tool.
             assert post("number-b", "wamid.c", "stock hai?").status_code == 200
-            assert isinstance(tool_results[-1], dict)
-            assert "available_qty" in tool_results[-1]
+            assert "check_inventory" in [
+                context["tool_call"]["name"]
+                for context in commerce_contexts()
+                if context["tool_call"] is not None
+            ]
+            assert "available" in sent[2]["text"]
 
             # D: A payment claim is just text; no promotion.
             assert post("number-b", "wamid.d", "payment ho gaya").status_code == 200
@@ -194,9 +192,9 @@ def test_signed_webhook_commerce_a_to_g(pg_session: Session, monkeypatch) -> Non
             assert buyers[0].is_customer is False
 
             # E: Number A goes to owner, not commerce, even for the same sender.
-            commerce_before = len(agent_calls)
+            commerce_before = len(sent)
             assert post("number-a", "wamid.e", "hello owner").status_code == 200
-            assert owner_calls == ["hello owner"] and len(agent_calls) == commerce_before
+            assert owner_calls == ["hello owner"] and commerce_before == 4
             owner_history = load_conversation_history(
                 pg_session, _SENDER, "number-a", business_id=DEMO_BUSINESS_ID
             )
@@ -205,11 +203,11 @@ def test_signed_webhook_commerce_a_to_g(pg_session: Session, monkeypatch) -> Non
             # F: Unknown receiving number fails closed.
             send_before = len(sent)
             assert post("unknown-number", "wamid.f", "hello").status_code == 403
-            assert len(sent) == send_before and len(agent_calls) == commerce_before
+            assert len(sent) == send_before
 
             # G: Meta replay cannot create another Buyer or execute commerce again.
             assert post("number-b", "wamid.a", "LED chahiye").status_code == 200
-            assert len(sent) == send_before and len(agent_calls) == commerce_before
+            assert len(sent) == send_before
             assert (
                 len(
                     list(

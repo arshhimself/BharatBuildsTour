@@ -41,5 +41,3 @@ def downgrade() -> None:
     op.alter_column("buyers", "type", nullable=False)
     op.create_check_constraint("ck_buyers_type", "buyers", "type IN ('lead', 'customer')")
     op.drop_column("buyers", "is_customer")
-    op.create_check_constraint("ck_buyers_type", "buyers", "type IN ('lead', 'customer')")
-    op.drop_column("buyers", "is_customer")

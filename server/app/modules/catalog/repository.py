@@ -23,6 +23,40 @@ def list_products(
     return list(session.scalars(statement).all())
 
 
+def get_active_product(session: Session, business_id: UUID, product_id: UUID) -> Product | None:
+    return session.scalar(
+        select(Product).where(
+            Product.business_id == business_id,
+            Product.id == product_id,
+            Product.active.is_(True),
+        )
+    )
+
+
+def filter_products_by_price(
+    session: Session,
+    business_id: UUID,
+    *,
+    min_price_paise: int | None,
+    max_price_paise: int | None,
+    limit: int,
+) -> list[Product]:
+    statement = select(Product).where(
+        Product.business_id == business_id,
+        Product.active.is_(True),
+    )
+    if min_price_paise is not None:
+        statement = statement.where(Product.base_unit_price_paise >= min_price_paise)
+    if max_price_paise is not None:
+        statement = statement.where(Product.base_unit_price_paise <= max_price_paise)
+    statement = statement.order_by(
+        Product.base_unit_price_paise,
+        Product.sku,
+        Product.id,
+    ).limit(limit)
+    return list(session.scalars(statement).all())
+
+
 def exact_match_candidates(
     session: Session, business_id: UUID, normalized_query: str
 ) -> list[tuple[Product, MatchType]]:

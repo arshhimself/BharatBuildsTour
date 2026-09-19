@@ -43,16 +43,31 @@ class Invoice(Base):
             name="fk_invoices_business_quote_version_run",
         ),
         ForeignKeyConstraint(
-            ["business_id", "payment_id", "quote_id", "run_id"],
-            ["payments.business_id", "payments.id", "payments.quote_id", "payments.run_id"],
+            ["order_id"],
+            ["orders.id"],
             ondelete="RESTRICT",
-            name="fk_invoices_business_payment_quote_run",
+            name="fk_invoices_order",
+        ),
+        ForeignKeyConstraint(
+            ["business_id", "payment_id"],
+            ["payments.business_id", "payments.id"],
+            ondelete="RESTRICT",
+            name="fk_invoices_business_payment",
         ),
         UniqueConstraint("business_id", "payment_id", name="uq_invoices_business_payment"),
         UniqueConstraint("business_id", "quote_id", name="uq_invoices_business_quote"),
+        UniqueConstraint("business_id", "order_id", name="uq_invoices_business_order"),
         UniqueConstraint("business_id", "invoice_number", name="uq_invoices_business_number"),
-        CheckConstraint("length(trim(run_id)) > 0", name="ck_invoices_run_nonempty"),
-        CheckConstraint("quote_version > 0", name="ck_invoices_quote_version_positive"),
+        CheckConstraint(
+            "length(trim(run_id)) > 0 OR run_id IS NULL", name="ck_invoices_run_nonempty"
+        ),
+        CheckConstraint(
+            "quote_version > 0 OR quote_version IS NULL", name="ck_invoices_quote_version_positive"
+        ),
+        CheckConstraint(
+            "(quote_id IS NOT NULL AND order_id IS NULL) OR (quote_id IS NULL AND order_id IS NOT NULL)",
+            name="ck_invoices_quote_or_order",
+        ),
         CheckConstraint("status IN ('PENDING_ARTIFACT', 'GENERATED')", name="ck_invoices_status"),
         CheckConstraint("currency = 'INR'", name="ck_invoices_currency_inr"),
         CheckConstraint("total_paise > 0", name="ck_invoices_total_positive"),
@@ -69,9 +84,10 @@ class Invoice(Base):
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     business_id: Mapped[UUID] = mapped_column(nullable=False)
-    run_id: Mapped[str] = mapped_column(String(160), nullable=False)
-    quote_id: Mapped[UUID] = mapped_column(nullable=False)
-    quote_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    run_id: Mapped[str | None] = mapped_column(String(160))
+    quote_id: Mapped[UUID | None] = mapped_column()
+    quote_version: Mapped[int | None] = mapped_column(Integer)
+    order_id: Mapped[UUID | None] = mapped_column()
     payment_id: Mapped[UUID] = mapped_column(nullable=False)
     invoice_number: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(

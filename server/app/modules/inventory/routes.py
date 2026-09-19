@@ -7,6 +7,7 @@ from app.api.business_context import AuthorizedBusinessId, enforce_business_clai
 from app.api.commercial import CommercialRoute
 from app.db.session import get_db
 from app.modules.inventory import service
+from app.modules.inventory.reservation import _get_active_reserved_qty
 from app.modules.inventory.schemas import InventoryCheckIn, InventoryCheckOut
 
 router = APIRouter(tags=["inventory"], route_class=CommercialRoute)
@@ -18,4 +19,4 @@ def check_inventory(
     body: InventoryCheckIn, db: DbSession, business_id: AuthorizedBusinessId
 ) -> InventoryCheckOut:
     enforce_business_claim(body.business_id, business_id)
-    return service.check_stock(db, business_id, body)
+    return service.check_stock(db, business_id, body, get_reserved_qty=_get_active_reserved_qty)

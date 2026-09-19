@@ -48,6 +48,54 @@ def get_products(
     ]
 
 
+def get_product(session: Session, business_id: UUID, product_id: UUID) -> ProductOut | None:
+    product = repository.get_active_product(session, business_id, product_id)
+    return _product_out(product) if product is not None else None
+
+
+def filter_products_by_price(
+    session: Session,
+    business_id: UUID,
+    *,
+    min_price_paise: int | None = None,
+    max_price_paise: int | None = None,
+    limit: int = 5,
+) -> list[ProductOut]:
+    if min_price_paise is not None and min_price_paise < 0:
+        raise ValueError("min_price_paise must be non-negative")
+    if max_price_paise is not None and max_price_paise < 0:
+        raise ValueError("max_price_paise must be non-negative")
+    if (
+        min_price_paise is not None
+        and max_price_paise is not None
+        and min_price_paise > max_price_paise
+    ):
+        raise ValueError("minimum price cannot exceed maximum price")
+    products = repository.filter_products_by_price(
+        session,
+        business_id,
+        min_price_paise=min_price_paise,
+        max_price_paise=max_price_paise,
+        limit=max(1, min(limit, 20)),
+    )
+    return [_product_out(product) for product in products]
+
+
+def _product_out(product: Product) -> ProductOut:
+    return ProductOut(
+        product_id=product.id,
+        sku=product.sku,
+        name=product.name,
+        sellable_unit=product.sellable_unit,
+        stock_unit=product.stock_unit,
+        pack_size=product.pack_size,
+        indivisible=product.indivisible,
+        base_unit_price_paise=product.base_unit_price_paise,
+        gst_rate_bps=product.gst_rate_bps,
+        active=product.active,
+    )
+
+
 def search_products(session: Session, business_id: UUID, query: str) -> list[ProductOut]:
     """
     Search for active products by loosely matching on SKU, name, or alias.

@@ -1,6 +1,7 @@
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -13,15 +14,13 @@ from app.modules.runs.agent_team import (
 )
 from app.modules.runs.intent_router import ActorType, IntentType, RouteDecision, route_message
 from app.modules.runs.manager_graph import manager_chat
-from app.modules.runs.models import BuyerCartSession, Run
+from app.modules.runs.models import Run
 from app.modules.runs.phrasing import phrase
 from app.modules.runs.repository import (
     add_event,
     create_approval,
     create_run,
-    get_cart_session,
     get_open_run_for_buyer,
-    get_or_create_cart_session,
     get_pending_approval,
     get_run_by_run_id,
     get_timeline,
@@ -150,39 +149,6 @@ def _run_pipeline(db: Session, run: Run, text_body: str) -> list[OutboundMessage
     return _continue_pipeline(db, run, line_items)
 
 
-def _create_run_from_cart(
-    db: Session,
-    buyer_wa_id: str,
-    cart: list[dict],
-    business_id: UUID | None = None,
-) -> list[OutboundMessage]:
-    """Checkout from the guided cart flow: items are already exact SKUs, so this
-    skips `mock_desks.match_line_items` entirely and feeds `_continue_pipeline`
-    directly, sharing the same stock/pricing/approval logic as free-text orders."""
-    line_items = [
-        {
-            "requested_text": line["name"],
-            "quantity": line["qty"],
-            "sku": line["sku"],
-            "name": line["name"],
-            "unit": line["unit"],
-            "match_status": "MATCHED",
-        }
-        for line in cart
-    ]
-    raw_text = ", ".join(f"{line['qty']} {line['unit']} {line['name']}" for line in cart)
-    run = create_run(db, buyer_wa_id, buyer_name=None, raw_text=raw_text, business_id=business_id)
-    add_event(
-        db, run, "Manager", "Run received from WhatsApp (guided cart checkout)", {"cart": cart}
-    )
-    _transition(db, run, RunStatus.NORMALIZING, "Manager", "Normalizing buyer request")
-    run.line_items = line_items
-    add_event(
-        db, run, "Stock Desk", "Parsed line items", {"line_items": line_items, "source": "cart"}
-    )
-    return _continue_pipeline(db, run, line_items)
-
-
 def _continue_pipeline(db: Session, run: Run, line_items: list[dict]) -> list[OutboundMessage]:
     outbound: list[OutboundMessage] = []
     settings = get_settings()
@@ -250,15 +216,7 @@ def _continue_pipeline(db: Session, run: Run, line_items: list[dict]) -> list[Ou
     return outbound
 
 
-def _save_prompt(session: BuyerCartSession, message: OutboundMessage) -> None:
-    session.last_prompt = {
-        "text": message.text,
-        "message_type": message.message_type,
-        "interactive": message.interactive,
-    }
-
-
-def _resend_prompt(buyer_wa_id: str, session: BuyerCartSession) -> OutboundMessage:
+def _resend_prompt(buyer_wa_id: str, session: Any) -> OutboundMessage:
     prompt = session.last_prompt or {}
     return OutboundMessage(
         buyer_wa_id,
@@ -268,135 +226,9 @@ def _resend_prompt(buyer_wa_id: str, session: BuyerCartSession) -> OutboundMessa
     )
 
 
-def _start_cart_flow(
-    db: Session,
-    buyer_wa_id: str,
-    phone_number_id: str | None,
-    business_id: UUID | None = None,
-) -> list[OutboundMessage]:
-    session = get_or_create_cart_session(db, buyer_wa_id, phone_number_id, business_id)
-    session.step = cart_flow.CartStep.BROWSING.value
-    session.cart = []
-    session.pending_sku = None
-    intro = "Here's what we have in stock:"
-    message = OutboundMessage(
-        buyer_wa_id,
-        intro,
-        message_type="interactive",
-        interactive=cart_flow.build_catalog_interactive(),
-    )
-    _save_prompt(session, message)
-    db.flush()
-    return [message]
-
-
-def _resume_browsing(
-    db: Session, session: BuyerCartSession, buyer_wa_id: str, *, prefix: str | None = None
-) -> list[OutboundMessage]:
-    session.step = cart_flow.CartStep.BROWSING.value
-    session.pending_sku = None
-    text = (
-        f"{prefix}\n\nHere's what we have in stock:" if prefix else "Here's what we have in stock:"
-    )
-    message = OutboundMessage(
-        buyer_wa_id,
-        text,
-        message_type="interactive",
-        interactive=cart_flow.build_catalog_interactive(),
-    )
-    _save_prompt(session, message)
-    db.flush()
-    return [message]
-
-
-def _handle_cart_reply(
-    db: Session,
-    session: BuyerCartSession,
-    buyer_wa_id: str,
-    text_body: str,
-    decision: RouteDecision,
-    interactive_reply_id: str | None,
-    phone_number_id: str | None,
-    business_id: UUID | None = None,
-) -> list[OutboundMessage]:
-    step = session.step
-
-    if step == cart_flow.CartStep.BROWSING.value:
-        sku = cart_flow.parse_item_reply_id(interactive_reply_id)
-        if sku is not None:
-            product = cart_flow.find_product(sku)
-            session.step = cart_flow.CartStep.AWAITING_QTY.value
-            session.pending_sku = sku
-            message = OutboundMessage(
-                buyer_wa_id,
-                f"How many {product['unit']} of {product['name']} would you like?",
-            )
-            _save_prompt(session, message)
-            db.flush()
-            return [message]
-        return _answer_interruption_and_resume(
-            db, session, buyer_wa_id, text_body, decision, phone_number_id
-        )
-
-    if step == cart_flow.CartStep.AWAITING_QTY.value:
-        qty = cart_flow.parse_quantity(text_body)
-        if qty is not None:
-            session.cart = cart_flow.add_or_merge(session.cart, session.pending_sku, qty)
-            session.pending_sku = None
-            session.step = cart_flow.CartStep.CART_MENU.value
-            message = OutboundMessage(
-                buyer_wa_id,
-                cart_flow.cart_summary_text(session.cart),
-                message_type="interactive",
-                interactive=cart_flow.build_cart_menu_interactive(),
-            )
-            _save_prompt(session, message)
-            db.flush()
-            return [message]
-        return _answer_interruption_and_resume(
-            db, session, buyer_wa_id, text_body, decision, phone_number_id
-        )
-
-    if step == cart_flow.CartStep.CART_MENU.value:
-        if interactive_reply_id == cart_flow.ACTION_ADD_MORE:
-            return _resume_browsing(db, session, buyer_wa_id)
-        if interactive_reply_id == cart_flow.ACTION_VIEW_CART:
-            message = OutboundMessage(
-                buyer_wa_id,
-                cart_flow.cart_summary_text(session.cart),
-                message_type="interactive",
-                interactive=cart_flow.build_view_cart_interactive(),
-            )
-            _save_prompt(session, message)
-            db.flush()
-            return [message]
-        if interactive_reply_id == cart_flow.ACTION_CLEAR_CART:
-            session.cart = []
-            return _resume_browsing(db, session, buyer_wa_id, prefix="Cart cleared.")
-        if interactive_reply_id == cart_flow.ACTION_CHECKOUT:
-            if not session.cart:
-                return _resume_browsing(
-                    db, session, buyer_wa_id, prefix="Your cart is empty, pick an item first."
-                )
-            cart = session.cart
-            session.step = cart_flow.CartStep.IDLE.value
-            session.cart = []
-            session.pending_sku = None
-            session.last_prompt = None
-            db.flush()
-            return _create_run_from_cart(db, buyer_wa_id, cart, business_id=business_id)
-        return _answer_interruption_and_resume(
-            db, session, buyer_wa_id, text_body, decision, phone_number_id
-        )
-
-    return _answer_interruption_and_resume(
-        db, session, buyer_wa_id, text_body, decision, phone_number_id
-    )
-
-
 def _answer_interruption_and_resume(
     db: Session,
-    session: BuyerCartSession,
+    session: Any,
     buyer_wa_id: str,
     text_body: str,
     decision: RouteDecision,
@@ -565,21 +397,8 @@ def process_buyer_message(
     )
 
     if run is None:
-        cart_session = get_cart_session(db, buyer_wa_id) if db is not None else None
-        if cart_session is not None and cart_session.step != cart_flow.CartStep.IDLE.value:
-            return _handle_cart_reply(
-                db,
-                cart_session,
-                buyer_wa_id,
-                text_body,
-                decision,
-                interactive_reply_id,
-                phone_number_id,
-                business_id,
-            )
-
         if decision.intent is IntentType.CATALOGUE_QUERY and db is not None:
-            return _start_cart_flow(db, buyer_wa_id, phone_number_id, business_id)
+            return [OutboundMessage(buyer_wa_id, "Catalog browsing is being upgraded. Stay tuned!")]
 
         if decision.intent not in {IntentType.REQUEST_ORDER, IntentType.REQUEST_QUOTE}:
             reply = sales_desk_chat(
@@ -592,9 +411,7 @@ def process_buyer_message(
             return [OutboundMessage(buyer_wa_id, reply)]
 
         prematched = mock_desks.match_line_items(text_body)
-        has_exact_match = any(item["match_status"] == "MATCHED" for item in prematched)
-        if not has_exact_match and db is not None:
-            return _start_cart_flow(db, buyer_wa_id, phone_number_id, business_id)
+        any(item["match_status"] == "MATCHED" for item in prematched)
 
         run = create_run(
             db, buyer_wa_id, buyer_name=None, raw_text=text_body, business_id=business_id

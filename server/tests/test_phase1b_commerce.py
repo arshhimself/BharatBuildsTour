@@ -4,7 +4,7 @@ from sqlalchemy import insert
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.service import search_products
-from app.modules.commerce.service import process_customer_commerce_message
+from app.modules.commerce.discovery_service import process_customer_commerce_message
 from app.modules.commerce.tools import build_commerce_tools
 from app.modules.identity.models import Business, Buyer
 from app.seed import DEMO_BUSINESS_ID

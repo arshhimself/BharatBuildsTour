@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.main import app
+from app.modules.commerce import discovery_service
 from app.modules.runs.service import OutboundMessage
 from app.modules.whatsapp import dispatch, service
 from app.modules.whatsapp import router as whatsapp_router
@@ -344,7 +345,6 @@ def test_signed_webhook_end_to_end_number_isolation_and_duplicate(
     webhook_client, monkeypatch
 ) -> None:
     """No real DB, LLM, or Meta calls; exercise the actual FastAPI route and dispatch."""
-    from app.modules.commerce import service as commerce_service
 
     seen = set()
     calls = []
@@ -385,7 +385,7 @@ def test_signed_webhook_end_to_end_number_isolation_and_duplicate(
         ),
     )
     monkeypatch.setattr(
-        commerce_service,
+        discovery_service,
         "process_customer_commerce_message",
         lambda _db, business_id, phone_number_id, wa_id, text_body: (
             calls.append(("commerce", phone_number_id, business_id))

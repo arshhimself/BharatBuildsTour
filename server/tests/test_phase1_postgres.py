@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import Settings
-from app.db.base import Base
+from app.db.base import Base, load_all_models
 from app.db.session import database_url, transaction_session
 from app.modules.catalog.models import Product, ProductAlias, ProductSubstitute
 from app.modules.identity.models import Business, Buyer
@@ -52,6 +52,7 @@ EXPECTED_TABLES = {
 
 
 def test_model_registry() -> None:
+    load_all_models()
     assert EXPECTED_TABLES <= set(Base.metadata.tables)
 
 

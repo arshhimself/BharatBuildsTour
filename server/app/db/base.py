@@ -18,7 +18,10 @@ MODEL_MODULES = (
     "app.modules.pricing.models",
     "app.modules.payments.models",
     "app.modules.invoices.models",
+    "app.modules.commerce.models",
 )
 
-for module in MODEL_MODULES:
-    import_module(module)
+
+def load_all_models() -> None:
+    for module in MODEL_MODULES:
+        import_module(module)

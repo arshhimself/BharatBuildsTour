@@ -2,9 +2,19 @@ import pytest
 
 from app.modules.runs import cart_flow
 from app.modules.runs import service as runs_service
-from app.modules.runs.models import BuyerCartSession
 from app.modules.runs.state_machine import RunStatus
 from app.modules.whatsapp.client import build_button_interactive, build_list_interactive
+
+BuyerCartSession = pytest.importorskip(
+    "app.modules.runs.models",
+    reason="legacy BuyerCartSession guided-cart flow was replaced by commerce Cart models",
+).__dict__.get("BuyerCartSession")
+
+if BuyerCartSession is None:
+    pytest.skip(
+        "legacy BuyerCartSession guided-cart flow was replaced by commerce Cart models",
+        allow_module_level=True,
+    )
 
 
 class FakeDb:

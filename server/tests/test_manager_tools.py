@@ -16,8 +16,15 @@ class FakeRun:
     quote_id: str | None = "Q-1042-V1"
     payment_id: str | None = None
     invoice_id: str | None = None
-    updated_at: datetime | None = datetime(2026, 9, 18, tzinfo=UTC)
-    created_at: datetime = datetime(2026, 9, 18, tzinfo=UTC)
+    updated_at: datetime | None = None
+    created_at: datetime | None = None
+
+    def __post_init__(self) -> None:
+        now = datetime.now(UTC)
+        if self.created_at is None:
+            self.created_at = now
+        if self.updated_at is None:
+            self.updated_at = now
 
 
 @dataclass

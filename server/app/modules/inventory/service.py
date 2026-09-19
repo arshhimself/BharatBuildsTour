@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
@@ -17,7 +18,10 @@ from app.modules.inventory.schemas import (
 
 
 def check_stock(
-    session: Session, business_id: UUID, request: InventoryCheckIn
+    session: Session,
+    business_id: UUID,
+    request: InventoryCheckIn,
+    get_reserved_qty: Callable[[Session, UUID, UUID], float] | None = None,
 ) -> InventoryCheckOut:
     product = repository.get_active_product(session, business_id, request.product_id)
     if product is None:
@@ -27,14 +31,18 @@ def check_stock(
         raise CommercialError(500, "INTERNAL_ERROR", "Inventory record missing for product.")
 
     requested = _stock_quantity(product, request)
-    on_hand = inventory.on_hand_qty
-    if on_hand == 0:
+    on_hand = float(inventory.on_hand_qty)
+    reserved = get_reserved_qty(session, business_id, product.id) if get_reserved_qty else 0.0
+    available = max(0.0, on_hand - reserved)
+    available_dec = Decimal(str(available)).quantize(Decimal("0.001"))
+
+    if available_dec == 0:
         status = StockStatus.OUT_OF_STOCK
-    elif on_hand < requested:
+    elif available_dec < requested:
         status = StockStatus.INSUFFICIENT_STOCK
     elif (
         inventory.reorder_threshold is not None
-        and on_hand - requested <= inventory.reorder_threshold
+        and available_dec - requested <= inventory.reorder_threshold
     ):
         status = StockStatus.LOW_STOCK
     else:
@@ -64,8 +72,8 @@ def check_stock(
         product_id=product.id,
         requested_qty=requested,
         stock_unit=product.stock_unit,
-        on_hand_qty=on_hand,
-        available_qty=on_hand,
+        on_hand_qty=Decimal(str(on_hand)),
+        available_qty=available_dec,
         checked_at=datetime.now(UTC),
         substitutes=substitutes,
     )

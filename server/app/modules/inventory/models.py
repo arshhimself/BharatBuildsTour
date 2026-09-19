@@ -71,3 +71,51 @@ class StockMovement(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+class StockReservation(Base):
+    __tablename__ = "stock_reservations"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["business_id", "product_id"],
+            ["inventory.business_id", "inventory.product_id"],
+            ondelete="RESTRICT",
+            name="fk_stock_reservations_business_product",
+        ),
+        ForeignKeyConstraint(
+            ["order_id"],
+            ["orders.id"],
+            ondelete="RESTRICT",
+            name="fk_stock_reservations_order",
+        ),
+        UniqueConstraint(
+            "business_id", "order_id", "product_id", name="uq_stock_reservations_order_product"
+        ),
+        CheckConstraint(
+            "status IN ('ACTIVE', 'CONSUMED', 'RELEASED', 'EXPIRED')",
+            name="ck_stock_reservations_status",
+        ),
+        CheckConstraint("quantity > 0", name="ck_stock_reservations_quantity_positive"),
+        Index("ix_stock_reservations_business_order", "business_id", "order_id"),
+        Index(
+            "ix_stock_reservations_active_product",
+            "business_id",
+            "product_id",
+            "status",
+            "expires_at",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = mapped_column(nullable=False)
+    order_id: Mapped[UUID] = mapped_column(nullable=False)
+    product_id: Mapped[UUID] = mapped_column(nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(Numeric(18, 3), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="ACTIVE")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )

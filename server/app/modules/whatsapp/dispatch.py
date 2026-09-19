@@ -1,9 +1,13 @@
 """Experience dispatch boundary. Customer commerce remains outside this phase."""
 
-from importlib import import_module
 from typing import TYPE_CHECKING, Protocol
 
 from sqlalchemy.orm import Session
+
+try:
+    from app.modules.commerce import discovery_service
+except ImportError:
+    discovery_service = None
 
 from app.modules.runs import service as runs_service
 from app.modules.runs.intent_router import ActorType, route_message
@@ -32,12 +36,10 @@ def _default_customer_commerce(
     message: dict,
 ) -> list["OutboundMessage"]:
     """Adapt trusted routing context to the existing commerce entry point."""
-    try:
-        commerce_service = import_module("app.modules.commerce.service")
-    except ImportError as exc:
-        raise CommerceHandlerUnavailable("customer_commerce handler is not installed") from exc
+    if discovery_service is None:
+        raise CommerceHandlerUnavailable("customer_commerce handler is not installed")
 
-    return commerce_service.process_customer_commerce_message(
+    return discovery_service.process_customer_commerce_message(
         db,
         business_id=context.business_id,
         phone_number_id=context.phone_number_id,
@@ -61,13 +63,8 @@ def register_customer_commerce_handler(handler: CustomerCommerceHandler) -> None
 
 def ensure_experience_handler_available(context: WhatsAppRoutingContext) -> None:
     if context.experience is WhatsAppExperience.CUSTOMER_COMMERCE:
-        if customer_commerce_handler is _default_customer_commerce:
-            try:
-                import_module("app.modules.commerce.service")
-            except ImportError as exc:
-                raise CommerceHandlerUnavailable(
-                    "customer_commerce handler is not installed"
-                ) from exc
+        if customer_commerce_handler is _default_customer_commerce and discovery_service is None:
+            raise CommerceHandlerUnavailable("customer_commerce handler is not installed")
 
 
 def dispatch_inbound_message(

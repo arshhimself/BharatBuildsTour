@@ -31,6 +31,12 @@ class Payment(Base):
             ondelete="RESTRICT",
             name="fk_payments_business_quote_version_run",
         ),
+        ForeignKeyConstraint(
+            ["order_id"],
+            ["orders.id"],
+            ondelete="RESTRICT",
+            name="fk_payments_order",
+        ),
         UniqueConstraint("business_id", "id", name="uq_payments_business_id_id"),
         UniqueConstraint(
             "business_id",
@@ -44,6 +50,12 @@ class Payment(Base):
             "quote_id",
             "run_id",
             name="uq_payments_business_id_quote_run",
+        ),
+        UniqueConstraint(
+            "business_id",
+            "id",
+            "order_id",
+            name="uq_payments_business_id_order",
         ),
         UniqueConstraint(
             "provider_account_key",
@@ -60,8 +72,16 @@ class Payment(Base):
             "provider_payment_id",
             name="uq_payments_provider_payment",
         ),
-        CheckConstraint("length(trim(run_id)) > 0", name="ck_payments_run_nonempty"),
-        CheckConstraint("quote_version > 0", name="ck_payments_quote_version_positive"),
+        CheckConstraint(
+            "length(trim(run_id)) > 0 OR run_id IS NULL", name="ck_payments_run_nonempty"
+        ),
+        CheckConstraint(
+            "quote_version > 0 OR quote_version IS NULL", name="ck_payments_quote_version_positive"
+        ),
+        CheckConstraint(
+            "(quote_id IS NOT NULL AND order_id IS NULL) OR (quote_id IS NULL AND order_id IS NOT NULL)",
+            name="ck_payments_quote_or_order",
+        ),
         CheckConstraint(
             "status IN ('CREATED', 'PENDING', 'PAID', 'FAILED', 'EXPIRED', 'CANCELLED')",
             name="ck_payments_status",
@@ -77,20 +97,33 @@ class Payment(Base):
             name="ck_payments_pending_link",
         ),
         Index("ix_payments_business_quote_version", "business_id", "quote_id", "quote_version"),
+        Index("ix_payments_business_order", "business_id", "order_id"),
         Index(
             "uq_payments_one_active_or_paid_per_quote",
             "business_id",
             "quote_id",
             unique=True,
-            postgresql_where=text("status IN ('CREATED', 'PENDING', 'PAID')"),
+            postgresql_where=text(
+                "status IN ('CREATED', 'PENDING', 'PAID') AND quote_id IS NOT NULL"
+            ),
+        ),
+        Index(
+            "uq_payments_one_active_or_paid_per_order",
+            "business_id",
+            "order_id",
+            unique=True,
+            postgresql_where=text(
+                "status IN ('CREATED', 'PENDING', 'PAID') AND order_id IS NOT NULL"
+            ),
         ),
     )
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     business_id: Mapped[UUID] = mapped_column(nullable=False)
-    run_id: Mapped[str] = mapped_column(String(160), nullable=False)
-    quote_id: Mapped[UUID] = mapped_column(nullable=False)
-    quote_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    run_id: Mapped[str | None] = mapped_column(String(160))
+    quote_id: Mapped[UUID | None] = mapped_column()
+    quote_version: Mapped[int | None] = mapped_column(Integer)
+    order_id: Mapped[UUID | None] = mapped_column()
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="CREATED")
     amount_paise: Mapped[int] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, server_default="INR")

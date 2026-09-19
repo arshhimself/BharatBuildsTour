@@ -4,7 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
-from app.db.base import Base
+from app.db.base import Base, load_all_models
 from app.db.session import database_url
 
 config = context.config
@@ -12,6 +12,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+load_all_models()
 target_metadata = Base.metadata
 url = database_url(get_settings()).render_as_string(hide_password=False)
 config.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
