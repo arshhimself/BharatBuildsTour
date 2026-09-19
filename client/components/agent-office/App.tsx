@@ -1022,10 +1022,13 @@ const App: React.FC<AgentOfficeProps> = ({ fullscreen = false }) => {
   const fallbackFiredRef = useRef(false)
 
   const scheduleNewAgentEvents = useCallback((events: AgentSimulationEvent[]) => {
+    const visibleEvents = events.filter(
+      event => event.message.trim().toLowerCase() !== 'parsed line items',
+    )
     const already = scheduledCountRef.current
-    const tail = events.slice(already)
+    const tail = visibleEvents.slice(already)
     if (tail.length === 0) return
-    scheduledCountRef.current = events.length
+    scheduledCountRef.current = visibleEvents.length
 
     scheduleMockEvents(tail, 4000).forEach(scheduled => {
       const visualEvent = toAgentVisualEvent(scheduled.event)
@@ -1072,8 +1075,11 @@ const App: React.FC<AgentOfficeProps> = ({ fullscreen = false }) => {
         const events = await getRunAgentEvents(runId)
         if (cancelled || events.length === 0) return
         const sorted = [...events].sort((a, b) => a.timestamp.localeCompare(b.timestamp))
-        setAgentEvents(sorted)
-        scheduleNewAgentEvents(sorted)
+        const visibleEvents = sorted.filter(
+          event => event.message.trim().toLowerCase() !== 'parsed line items',
+        )
+        setAgentEvents(visibleEvents)
+        scheduleNewAgentEvents(visibleEvents)
       } catch {
         // Network hiccup / no runs yet / auth issue — try again next tick, or fall
         // back to the fixture below if nothing real ever shows up.

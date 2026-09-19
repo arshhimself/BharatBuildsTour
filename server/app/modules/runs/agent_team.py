@@ -741,15 +741,27 @@ def agentcraft_events_from_run_events(
     events = []
     seen_transitions: set[tuple[str, str, str]] = set()
     previous_agent = "manager"
-    for event in run_events:
-        to_agent = AGENTCRAFT_AGENT_IDS_BY_ROLE.get(event.role, "manager")
-        if to_agent == previous_agent:
+    last_message: str | None = None
+    for index, event in enumerate(run_events):
+        if event.event.casefold().strip() == "parsed line items":
             continue
-        signature = (previous_agent, to_agent, event.event.casefold().strip())
+        to_agent = AGENTCRAFT_AGENT_IDS_BY_ROLE.get(event.role, "manager")
+        from_agent = previous_agent
+        message_key = event.event.casefold().strip()
+        # Always advance, even when this event is filtered below, so a run
+        # of same-agent events can never get permanently stuck skipping.
+        previous_agent = to_agent
+        if to_agent == from_agent and (index == 0 or message_key == last_message):
+            # Drop the opening self-referential event (e.g. manager logging
+            # its own kickoff) and immediate literal repeats only.
+            last_message = message_key
+            continue
+        signature = (from_agent, to_agent, message_key)
         if signature in seen_transitions:
-            previous_agent = to_agent
+            last_message = message_key
             continue
         seen_transitions.add(signature)
+        last_message = message_key
         status = "working"
         event_text = event.event.casefold()
         if "approval" in event_text:
@@ -761,7 +773,7 @@ def agentcraft_events_from_run_events(
         events.append(
             {
                 "run_id": run_id,
-                "from_agent": previous_agent,
+                "from_agent": from_agent,
                 "to_agent": to_agent,
                 "type": "result" if to_agent == "manager" else "task",
                 "message": event.event,
