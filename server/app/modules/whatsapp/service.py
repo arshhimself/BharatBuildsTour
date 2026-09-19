@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from uuid import uuid4
@@ -15,6 +16,8 @@ from app.modules.whatsapp.dispatch import (
 )
 from app.modules.whatsapp.models import WhatsAppMessage, WhatsAppMessageStatus
 from app.modules.whatsapp.routing import WhatsAppExperience, resolve_routing_context
+
+logger = logging.getLogger(__name__)
 
 TEXTUAL_MESSAGE_TYPES = {
     "text",
@@ -426,3 +429,39 @@ async def handle_webhook_payload(db: Session, payload: dict) -> None:
                 },
             )
         db.commit()
+
+
+def send_whatsapp_message(to: str, text: str, phone_number_id: str | None = None) -> None:
+    """Synchronous helper to send text message via WhatsApp Cloud API."""
+    import asyncio
+
+    try:
+        asyncio.run(client.send_text_message(to, text, phone_number_id))
+    except Exception as exc:
+        logger.warning(f"send_whatsapp_message failed: {exc}")
+
+
+def send_whatsapp_media(
+    to: str,
+    media_url: str,
+    caption: str | None = None,
+    message_type: str = "image",
+    filename: str | None = None,
+    phone_number_id: str | None = None,
+) -> None:
+    """Synchronous helper to send media via WhatsApp Cloud API."""
+    import asyncio
+
+    try:
+        asyncio.run(
+            client.send_message(
+                to=to,
+                message_type=message_type,
+                link=media_url,
+                caption=caption,
+                filename=filename,
+                phone_number_id=phone_number_id,
+            )
+        )
+    except Exception as exc:
+        logger.warning(f"send_whatsapp_media failed: {exc}")

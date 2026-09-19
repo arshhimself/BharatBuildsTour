@@ -15,7 +15,7 @@ from app.modules.social.schemas import InstagramPublishResponse
 logger = logging.getLogger(__name__)
 
 
-def format_caption(caption: str, hashtags: Optional[list[str]] = None) -> str:
+def format_caption(caption: str, hashtags: list[str] | None = None) -> str:
     """Format caption with normalized hashtags, avoiding double '#' and duplicates."""
     clean_caption = (caption or "").strip()
     if not hashtags:
@@ -46,8 +46,8 @@ def format_caption(caption: str, hashtags: Optional[list[str]] = None) -> str:
 async def publish_instagram_post_async(
     image_url: str,
     caption: str,
-    hashtags: Optional[list[str]] = None,
-    db: Optional[Session] = None,
+    hashtags: list[str] | None = None,
+    db: Session | None = None,
 ) -> dict[str, Any]:
     """Publish a public image post to Instagram via Instagram Graph API."""
     settings = get_settings()
@@ -88,7 +88,9 @@ async def publish_instagram_post_async(
             container_data = container_res.json()
 
             if container_res.status_code >= 400 or "id" not in container_data:
-                err_msg = container_data.get("error", {}).get("message", "Media container creation failed.")
+                err_msg = container_data.get("error", {}).get(
+                    "message", "Media container creation failed."
+                )
                 logger.error("Instagram container creation failed: %s", err_msg)
                 _record_post_status(db, image_url, full_caption, status="FAILED", error=err_msg)
                 return InstagramPublishResponse(
@@ -101,6 +103,7 @@ async def publish_instagram_post_async(
 
             # Poll container status until ready
             import asyncio
+
             status_code = "IN_PROGRESS"
             for _ in range(10):
                 status_res = await client.get(
@@ -172,8 +175,8 @@ async def publish_instagram_post_async(
 def publish_instagram_post(
     image_url: str,
     caption: str,
-    hashtags: Optional[list[str]] = None,
-    db: Optional[Session] = None,
+    hashtags: list[str] | None = None,
+    db: Session | None = None,
 ) -> dict[str, Any]:
     """Synchronous wrapper for tool calls."""
     import asyncio
@@ -198,13 +201,13 @@ def publish_instagram_post(
 
 
 def _record_post_status(
-    db: Optional[Session],
+    db: Session | None,
     image_url: str,
     caption: str,
     status: str,
-    media_id: Optional[str] = None,
-    account_id: Optional[str] = None,
-    error: Optional[str] = None,
+    media_id: str | None = None,
+    account_id: str | None = None,
+    error: str | None = None,
 ) -> None:
     if db is None:
         return

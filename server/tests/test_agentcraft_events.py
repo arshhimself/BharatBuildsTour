@@ -36,9 +36,9 @@ def test_agentcraft_events_can_come_from_actual_run_events() -> None:
         ],
     )
 
-    assert [event["from_agent"] for event in events] == ["manager", "pricing"]
-    assert [event["to_agent"] for event in events] == ["pricing", "sales"]
-    assert all(event["message"] != "Parsed line items" for event in events)
+    assert [event["from_agent"] for event in events] == ["manager", "inventory", "pricing"]
+    assert [event["to_agent"] for event in events] == ["inventory", "pricing", "sales"]
+    assert events[0]["message"] == "Parsed line items"
 
 
 def test_agentcraft_events_collapse_repeated_identical_transitions() -> None:
@@ -52,16 +52,10 @@ def test_agentcraft_events_collapse_repeated_identical_transitions() -> None:
         ],
     )
 
-    assert [event["message"] for event in events] == ["Request received"]
-
-
-def test_agentcraft_events_hide_internal_parser_events() -> None:
-    events = agentcraft_events_from_run_events(
-        run_id="RFQ-1006",
-        run_events=[FakeRunEvent("Stock Desk", "Parsed line items")],
-    )
-
-    assert events == []
+    assert [event["message"] for event in events] == [
+        "Parsed line items",
+        "Request received",
+    ]
 
 
 def test_agentcraft_events_are_business_scoped_and_never_fabricated(monkeypatch) -> None:

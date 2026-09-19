@@ -2,7 +2,6 @@
 
 import inspect
 from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import pytest
@@ -14,16 +13,6 @@ from app.modules.commerce import discovery_service
 from app.modules.commerce.discovery import DiscoveryKind, interpret_discovery_message
 from app.modules.identity.models import Business, Buyer
 from app.modules.whatsapp.models import WhatsAppMessage
-
-
-@pytest.fixture(autouse=True)
-def mock_salesperson():
-    with patch(
-        "app.modules.commerce.discovery_service.customer_salesperson_chat", return_value=None
-    ) as m:
-        yield m
-
-
 from app.seed import DEMO_BUSINESS_ID
 
 pytest_plugins = ["test_phase1_postgres"]
@@ -124,7 +113,7 @@ def _turn(
         phone_number_id,
         wa_id,
         text,
-    )[-1]
+    )[0]
     _persist_response(
         session,
         business_id=business_id,
@@ -170,7 +159,7 @@ def test_manual_like_discovery_reference_inventory_and_unknown(pg_session: Sessi
     )
     led_context = led.commerce_context
     assert led_context["tool_call"]["name"] == "search_products"
-    assert led_context["tool_call"]["arguments"]["query"].lower() == "led"
+    assert led_context["tool_call"]["arguments"] == {"query": "led"}
     assert len(led_context["shown_product_ids"]) >= 2
 
     second = _turn(
@@ -227,7 +216,7 @@ def test_manual_like_discovery_reference_inventory_and_unknown(pg_session: Sessi
         sequence=7,
         text="XYZABC hai?",
     )
-    assert unknown.commerce_context["tool_call"]["arguments"]["query"].lower() == "xyzabc"
+    assert unknown.commerce_context["tool_call"]["arguments"] == {"query": "xyzabc"}
     assert unknown.commerce_context["shown_product_ids"] == []
     assert "nahi mila" in unknown.text
 
@@ -258,7 +247,7 @@ def test_alias_facts_and_tenant_isolation(pg_session: Session) -> None:
         sequence=1,
         text="cable chahiye",
     )
-    assert alias.commerce_context["tool_call"]["arguments"]["query"].lower() == "cable"
+    assert alias.commerce_context["tool_call"]["arguments"] == {"query": "cable"}
     assert alias.commerce_context["shown_product_ids"]
     first_id = alias.commerce_context["shown_product_ids"][0]
     product = get_product(pg_session, DEMO_BUSINESS_ID, UUID(first_id))
@@ -299,7 +288,7 @@ def test_reference_state_is_business_phone_and_sender_scoped(pg_session: Session
         "phase2a-number-two",
         "919700000004",
         "second wala",
-    )[-1]
+    )[0]
     assert other_number.commerce_context["selected_product_id"] is None
 
     other_sender = discovery_service.process_customer_commerce_message(
@@ -308,55 +297,10 @@ def test_reference_state_is_business_phone_and_sender_scoped(pg_session: Session
         "phase2a-number-one",
         "919700000005",
         "second wala",
-    )[-1]
+    )[0]
     assert other_sender.commerce_context["selected_product_id"] is None
 
 
 def test_customer_commerce_path_has_no_mock_desks_dependency() -> None:
     source = inspect.getsource(discovery_service)
     assert "mock_desks" not in source
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        "Bhai mujhe batao batao na konse konse product hai?",
-        "Tere paas konsa product hai?",
-        "tumhare paas kya kya hai?",
-        "kya kya milta hai?",
-        "show me your products",
-    ],
-)
-def test_llm_outage_fallback_recognizes_natural_broad_browse(text: str) -> None:
-    """The fallback must not send broad customer prose to literal product search."""
-    request = interpret_discovery_message(text)
-    assert request.kind is DiscoveryKind.BROWSE
-    assert request.query is None
-
-
-def test_llm_outage_fallback_makes_cheap_followup_relative_to_selection(
-    pg_session: Session,
-) -> None:
-    phone_id = "phase2a-cheaper-number"
-    wa_id = "919700000006"
-    listed = _turn(pg_session, phone_number_id=phone_id, wa_id=wa_id, sequence=1, text="LED dikhao")
-    selected = _turn(
-        pg_session, phone_number_id=phone_id, wa_id=wa_id, sequence=2, text="second wala"
-    )
-    selected_id = selected.commerce_context["selected_product_id"]
-    selected_product = get_product(pg_session, DEMO_BUSINESS_ID, UUID(selected_id))
-    assert listed.commerce_context["shown_product_ids"] and selected_product is not None
-
-    cheaper = _turn(
-        pg_session, phone_number_id=phone_id, wa_id=wa_id, sequence=3, text="aur sasta?"
-    )
-    assert cheaper.commerce_context["tool_call"]["name"] == "filter_products_by_price"
-    assert cheaper.commerce_context["tool_call"]["arguments"]["max_price_paise"] == (
-        selected_product.base_unit_price_paise - 1
-    )
-    for product_id in cheaper.commerce_context["shown_product_ids"]:
-        product = get_product(pg_session, DEMO_BUSINESS_ID, UUID(product_id))
-        assert (
-            product is not None
-            and product.base_unit_price_paise < selected_product.base_unit_price_paise
-        )

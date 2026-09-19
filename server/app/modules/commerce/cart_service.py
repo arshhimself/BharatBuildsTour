@@ -8,7 +8,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from app.modules.catalog.models import Product
+from app.modules.catalog.models import Product, ProductVariant
 from app.modules.commerce.models import Cart, CartItem, Order, OrderItem
 from app.modules.inventory.models import Inventory
 from app.modules.payments.models import IdempotencyKey
@@ -33,8 +33,8 @@ def claim_idempotency(
         .on_conflict_do_nothing(index_elements=["business_id", "action", "key"])
         .returning(IdempotencyKey.id)
     )
-    result = db.execute(stmt)
-    return result.scalar() is not None
+    inserted_id = db.scalar(stmt)
+    return inserted_id is not None
 
 
 def get_or_create_active_cart(db: Session, business_id: UUID, buyer_id: UUID) -> Cart:
@@ -69,36 +69,15 @@ def view_cart(db: Session, business_id: UUID, buyer_id: UUID) -> dict[str, Any]:
             select(Product).where(Product.id == ci.product_id, Product.business_id == business_id)
         )
         if product:
-            unit_price = product.base_unit_price_paise
-            size = None
-            color = None
-            variant_sku = product.sku
-
-            if ci.variant_id:
-                from app.modules.catalog.models import ProductVariant
-
-                variant = db.scalar(
-                    select(ProductVariant).where(ProductVariant.id == ci.variant_id)
-                )
-                if variant:
-                    if variant.price_override_paise is not None:
-                        unit_price = variant.price_override_paise
-                    size = variant.size
-                    color = variant.color
-                    variant_sku = variant.sku
-
-            line_total = unit_price * ci.quantity
+            line_total = product.price_paise * ci.quantity
             total_paise += line_total
             items.append(
                 {
                     "product_id": str(product.id),
-                    "variant_id": str(ci.variant_id) if ci.variant_id else None,
-                    "sku": variant_sku,
+                    "sku": product.sku,
                     "name": product.name,
-                    "size": size,
-                    "color": color,
                     "quantity": ci.quantity,
-                    "unit_price_paise": unit_price,
+                    "unit_price_paise": product.price_paise,
                     "line_total_paise": line_total,
                 }
             )
@@ -118,7 +97,7 @@ def add_to_cart(
         return {"error": "Quantity must be positive."}
 
     if not claim_idempotency(
-        db, business_id, "add_to_cart", idempotency_key, f"{product_id}-{variant_id}-{quantity}"
+        db, business_id, "add_to_cart", idempotency_key, str(product_id) + str(quantity)
     ):
         return {"status": "duplicate_ignored"}
 
@@ -137,22 +116,20 @@ def add_to_cart(
 
     # Check existing item
     cart_item = db.scalar(
-        select(CartItem).where(
-            CartItem.cart_id == cart.id,
-            CartItem.product_id == product_id,
-            CartItem.variant_id == variant_id,
-        )
+        select(CartItem).where(CartItem.cart_id == cart.id, CartItem.product_id == product_id)
     )
 
     new_quantity = quantity
     if cart_item:
         new_quantity += cart_item.quantity
 
-    if inventory and inventory.on_hand_qty < new_quantity:
-        return {"error": f"Insufficient stock. Only {inventory.on_hand_qty} available."}
+    if inventory and inventory.quantity_available < new_quantity:
+        return {"error": f"Insufficient stock. Only {inventory.quantity_available} available."}
 
     if cart_item:
         cart_item.quantity = new_quantity
+        if variant_id:
+            cart_item.variant_id = variant_id
     else:
         cart_item = CartItem(
             cart_id=cart.id, product_id=product_id, variant_id=variant_id, quantity=quantity
@@ -164,23 +141,14 @@ def add_to_cart(
 
 
 def update_cart_quantity(
-    db: Session,
-    business_id: UUID,
-    buyer_id: UUID,
-    product_id: UUID,
-    quantity: int,
-    variant_id: UUID | None = None,
+    db: Session, business_id: UUID, buyer_id: UUID, product_id: UUID, quantity: int
 ) -> dict[str, Any]:
     if quantity < 0:
         return {"error": "Quantity cannot be negative."}
 
     cart = get_or_create_active_cart(db, business_id, buyer_id)
     cart_item = db.scalar(
-        select(CartItem).where(
-            CartItem.cart_id == cart.id,
-            CartItem.product_id == product_id,
-            CartItem.variant_id == variant_id,
-        )
+        select(CartItem).where(CartItem.cart_id == cart.id, CartItem.product_id == product_id)
     )
 
     if not cart_item:
@@ -194,8 +162,8 @@ def update_cart_quantity(
     inventory = db.scalar(
         select(Inventory).where(Inventory.product_id == product_id).with_for_update()
     )
-    if inventory and inventory.on_hand_qty < quantity:
-        return {"error": f"Insufficient stock. Only {inventory.on_hand_qty} available."}
+    if inventory and inventory.quantity_available < quantity:
+        return {"error": f"Insufficient stock. Only {inventory.quantity_available} available."}
 
     cart_item.quantity = quantity
     db.flush()
@@ -203,15 +171,11 @@ def update_cart_quantity(
 
 
 def remove_from_cart(
-    db: Session, business_id: UUID, buyer_id: UUID, product_id: UUID, variant_id: UUID | None = None
+    db: Session, business_id: UUID, buyer_id: UUID, product_id: UUID
 ) -> dict[str, Any]:
     cart = get_or_create_active_cart(db, business_id, buyer_id)
     cart_item = db.scalar(
-        select(CartItem).where(
-            CartItem.cart_id == cart.id,
-            CartItem.product_id == product_id,
-            CartItem.variant_id == variant_id,
-        )
+        select(CartItem).where(CartItem.cart_id == cart.id, CartItem.product_id == product_id)
     )
     if cart_item:
         db.delete(cart_item)
@@ -273,35 +237,31 @@ def checkout_cart(
         if not product:
             return {"error": f"Product {ci.product_id} no longer exists."}
 
-        if inventory and inventory.on_hand_qty < ci.quantity:
-            return {
-                "error": f"Insufficient stock for {product.name}. Only {inventory.on_hand_qty} available."
-            }
+        if inventory and inventory.quantity_available < ci.quantity:
+            return {"error": f"Insufficient stock for {product.name}."}
 
-        unit_price = product.base_unit_price_paise
-        sku = product.sku
-        size = None
-        color = None
+        unit_price = product.price_paise
+        sku_snap = product.sku
+        size_snap = None
+        color_snap = None
 
         if ci.variant_id:
-            from app.modules.catalog.models import ProductVariant
-
             variant = db.scalar(select(ProductVariant).where(ProductVariant.id == ci.variant_id))
             if variant:
                 if variant.price_override_paise is not None:
                     unit_price = variant.price_override_paise
-                sku = variant.sku
-                size = variant.size
-                color = variant.color
+                sku_snap = variant.sku
+                size_snap = variant.size
+                color_snap = variant.color
 
         order_item = OrderItem(
             order_id=order.id,
             product_id=product.id,
             variant_id=ci.variant_id,
-            sku_snapshot=sku,
+            sku_snapshot=sku_snap,
             name_snapshot=product.name,
-            size_snapshot=size,
-            color_snapshot=color,
+            size_snapshot=size_snap,
+            color_snapshot=color_snap,
             unit_price_paise=unit_price,
             quantity=ci.quantity,
         )

@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from app.db.base import load_all_models
 from app.db.session import transaction_session
 from app.modules.catalog.models import Product, ProductAlias, ProductSubstitute
 from app.modules.catalog.normalization import normalize_catalog_text
@@ -19,6 +20,8 @@ from app.modules.invoices.models import Invoice
 from app.modules.payments.models import Payment
 from app.modules.pricing.models import PricingRule, Quote, QuoteLineage
 from app.modules.runs.models import Run
+
+load_all_models()
 
 DEMO_BUSINESS_ID = uuid5(NAMESPACE_URL, "stockaware/demo/business/v1")
 DEMO_RULE_ID = uuid5(NAMESPACE_URL, "stockaware/demo/pricing-rule/v1")

@@ -67,7 +67,7 @@ class CartItem(Base):
         ForeignKey("products.id", ondelete="RESTRICT"), nullable=False
     )
     variant_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("product_variants.id", ondelete="RESTRICT")
+        ForeignKey("product_variants.id", ondelete="SET NULL"), nullable=True
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -127,12 +127,12 @@ class OrderItem(Base):
         ForeignKey("products.id", ondelete="RESTRICT"), nullable=False
     )
     variant_id: Mapped[UUID | None] = mapped_column(
-        ForeignKey("product_variants.id", ondelete="RESTRICT")
+        ForeignKey("product_variants.id", ondelete="SET NULL"), nullable=True
     )
     sku_snapshot: Mapped[str] = mapped_column(String(255), nullable=False)
     name_snapshot: Mapped[str] = mapped_column(String(255), nullable=False)
-    size_snapshot: Mapped[str | None] = mapped_column(String(255))
-    color_snapshot: Mapped[str | None] = mapped_column(String(255))
+    size_snapshot: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    color_snapshot: Mapped[str | None] = mapped_column(String(32), nullable=True)
     unit_price_paise: Mapped[int] = mapped_column(BigInteger, nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(

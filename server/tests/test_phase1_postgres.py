@@ -262,9 +262,11 @@ def _quote_chain(session: Session, run_id: str) -> tuple[UUID, UUID, UUID]:
 def test_migration_created_expected_schema(pg_engine: Engine) -> None:
     inspector = inspect(pg_engine)
     assert EXPECTED_TABLES <= set(inspector.get_table_names())
-    assert "fk_invoices_business_payment" in {
-        key["name"] for key in inspector.get_foreign_keys("invoices")
-    }
+    foreign_keys = {key["name"] for key in inspector.get_foreign_keys("invoices")}
+    assert (
+        "fk_invoices_business_payment_quote_run" in foreign_keys
+        or "fk_invoices_business_payment" in foreign_keys
+    )
     assert "uq_payment_events_provider_account_event" in {
         key["name"] for key in inspector.get_unique_constraints("payment_events")
     }

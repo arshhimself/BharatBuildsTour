@@ -56,12 +56,12 @@ def setup_order(
     )
     db.execute(
         text(
-            f"INSERT INTO buyers (id, business_id, display_name, is_customer) VALUES ('{buyer_id}', '{business_id}', 'Test Buyer', false) ON CONFLICT DO NOTHING"
+            f"INSERT INTO buyers (id, business_id, display_name) VALUES ('{buyer_id}', '{business_id}', 'Test Buyer') ON CONFLICT DO NOTHING"
         )
     )
     db.execute(
         text(
-            f"INSERT INTO products (id, business_id, sku, normalized_sku, name, normalized_name, sellable_unit, stock_unit, cost_unit_paise, base_unit_price_paise, gst_rate_bps, pack_size) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'sku-1', 'Product 1', 'product 1', 'pc', 'pc', 1000, 2000, 1800, 1) ON CONFLICT DO NOTHING"
+            f"INSERT INTO products (id, business_id, sku, normalized_sku, name, normalized_name, sellable_unit, stock_unit, pack_size, cost_unit_paise, base_unit_price_paise, gst_rate_bps) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'sku-1', 'Product 1', 'product 1', 'pcs', 'pcs', 1.0, 0, 100, 0) ON CONFLICT DO NOTHING"
         )
     )
     db.execute(
@@ -106,7 +106,6 @@ def test_cancel_unpaid(pg_session: Session, business_id, buyer_id, product_id, o
 
     cancel_order(pg_session, business_id, order_id, "out of stock")
 
-    pg_session.commit()
     res = pg_session.execute(text(f"SELECT status FROM orders WHERE id='{order_id}'")).scalar_one()
     assert res == "cancelled"
 
@@ -128,8 +127,8 @@ def test_cancel_paid_triggers_refund(
 
     # Customer cancels
     cancel_order(pg_session, business_id, order_id, "ordered wrong item")
+    pg_session.flush()
 
-    pg_session.commit()
     res = pg_session.execute(text(f"SELECT status FROM orders WHERE id='{order_id}'")).scalar_one()
     assert res == "refund_pending"
 

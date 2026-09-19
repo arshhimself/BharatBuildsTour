@@ -81,32 +81,6 @@ def filter_products_by_price(
     return [_product_out(product) for product in products]
 
 
-def list_categories(session: Session, business_id: UUID) -> list[dict[str, str]]:
-    return [
-        {"id": str(category.id), "name": category.name}
-        for category in repository.list_categories(session, business_id)
-    ]
-
-
-def browse_category(
-    session: Session, business_id: UUID, category_name: str, *, limit: int = 20
-) -> tuple[dict[str, str] | None, list[ProductOut]]:
-    normalized = " ".join(category_name.casefold().split())
-    category = (
-        repository.get_category_by_normalized_name(session, business_id, normalized)
-        if normalized
-        else None
-    )
-    if category is None:
-        return None, []
-    products = repository.list_products_in_category(
-        session, business_id, category.id, limit=max(1, min(limit, 20))
-    )
-    return {"id": str(category.id), "name": category.name}, [
-        _product_out(product) for product in products
-    ]
-
-
 def _product_out(product: Product) -> ProductOut:
     return ProductOut(
         product_id=product.id,

@@ -13,7 +13,7 @@ pytest_plugins = ["test_phase1_postgres"]
 
 
 def test_commerce_tools_catalog_search(pg_session: Session):
-    tools = build_commerce_tools(pg_session, DEMO_BUSINESS_ID, uuid4())
+    tools = build_commerce_tools(pg_session, DEMO_BUSINESS_ID)
     search_tool = next(t for t in tools if t.name == "search_products")
 
     # Test fuzzy search on Name
@@ -29,7 +29,7 @@ def test_commerce_tools_catalog_search(pg_session: Session):
 
 
 def test_commerce_tools_inventory_check(pg_session: Session):
-    tools = build_commerce_tools(pg_session, DEMO_BUSINESS_ID, uuid4())
+    tools = build_commerce_tools(pg_session, DEMO_BUSINESS_ID)
     search_tool = next(t for t in tools if t.name == "search_products")
     check_inventory_tool = next(t for t in tools if t.name == "check_inventory")
 
@@ -102,7 +102,7 @@ def test_inventory_tool_rejects_cross_tenant_product(pg_session: Session):
         insert(Business).values(id=other_business_id, display_name="Inventory isolation fixture")
     )
     pg_session.flush()
-    other_tools = build_commerce_tools(pg_session, other_business_id, uuid4())
+    other_tools = build_commerce_tools(pg_session, other_business_id)
     inventory_tool = next(tool for tool in other_tools if tool.name == "check_inventory")
 
     result = inventory_tool.invoke({"product_id": str(product.product_id), "requested_qty": 1})

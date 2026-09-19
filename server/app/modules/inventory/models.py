@@ -27,6 +27,12 @@ class Inventory(Base):
             ondelete="RESTRICT",
             name="fk_inventory_business_product",
         ),
+        ForeignKeyConstraint(
+            ["business_id", "variant_id"],
+            ["product_variants.business_id", "product_variants.id"],
+            ondelete="RESTRICT",
+            name="fk_inventory_business_variant",
+        ),
         CheckConstraint("on_hand_qty >= 0", name="ck_inventory_on_hand_nonnegative"),
         CheckConstraint(
             "reorder_threshold IS NULL OR reorder_threshold >= 0",
@@ -37,12 +43,17 @@ class Inventory(Base):
 
     business_id: Mapped[UUID] = mapped_column(primary_key=True)
     product_id: Mapped[UUID] = mapped_column(primary_key=True)
+    variant_id: Mapped[UUID | None] = mapped_column(nullable=True)
     on_hand_qty: Mapped[Decimal] = mapped_column(Numeric(18, 3), nullable=False)
     reorder_threshold: Mapped[Decimal | None] = mapped_column(Numeric(18, 3))
     version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+    @property
+    def quantity_available(self) -> Decimal:
+        return self.on_hand_qty
 
 
 class StockMovement(Base):

@@ -75,20 +75,20 @@ class Buyer(Base):
 
 class StoreProfile(Base):
     __tablename__ = "store_profiles"
+    __table_args__ = (UniqueConstraint("business_id", name="uq_store_profiles_business_id"),)
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     business_id: Mapped[UUID] = mapped_column(
-        ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, unique=True
+        ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False
     )
-    display_name: Mapped[str | None] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(String(1000))
     store_type: Mapped[str | None] = mapped_column(String(128))
-    address_line: Mapped[str | None] = mapped_column(String(512))
+    address_line: Mapped[str | None] = mapped_column(String(255))
     city: Mapped[str | None] = mapped_column(String(128))
     support_number: Mapped[str | None] = mapped_column(String(32))
     opening_hours: Mapped[str | None] = mapped_column(String(255))
-    delivery_info: Mapped[str | None] = mapped_column(String(1000))
-    return_policy: Mapped[str | None] = mapped_column(String(1000))
+    delivery_info: Mapped[str | None] = mapped_column(String(512))
+    return_policy: Mapped[str | None] = mapped_column(String(512))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

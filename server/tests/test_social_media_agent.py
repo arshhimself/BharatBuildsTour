@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
 from app.core.config import get_settings
 from app.modules.runs.manager_tools import InstagramPostInput, build_tools
 from app.modules.social.service import format_caption, publish_instagram_post_async
@@ -16,9 +17,11 @@ def test_format_caption():
     assert format_caption("", ["#tag1", "tag2"]) == "#tag1 #tag2"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_publish_instagram_post_missing_credentials(monkeypatch):
-    monkeypatch.setattr(get_settings(), "instagram_access_token", MagicMock(get_secret_value=lambda: ""))
+    monkeypatch.setattr(
+        get_settings(), "instagram_access_token", MagicMock(get_secret_value=lambda: "")
+    )
     monkeypatch.setattr(get_settings(), "instagram_user_id", "")
 
     result = await publish_instagram_post_async("https://example.com/image.jpg", "Test Caption")
@@ -26,9 +29,11 @@ async def test_publish_instagram_post_missing_credentials(monkeypatch):
     assert result["error_code"] == "CREDENTIALS_MISSING"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_publish_instagram_post_invalid_image_url(monkeypatch):
-    monkeypatch.setattr(get_settings(), "instagram_access_token", MagicMock(get_secret_value=lambda: "token123"))
+    monkeypatch.setattr(
+        get_settings(), "instagram_access_token", MagicMock(get_secret_value=lambda: "token123")
+    )
     monkeypatch.setattr(get_settings(), "instagram_user_id", "17841400000000000")
 
     result = await publish_instagram_post_async("invalid-url", "Test Caption")
@@ -36,9 +41,11 @@ async def test_publish_instagram_post_invalid_image_url(monkeypatch):
     assert result["error_code"] == "INVALID_IMAGE_URL"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_publish_instagram_post_success(monkeypatch):
-    monkeypatch.setattr(get_settings(), "instagram_access_token", MagicMock(get_secret_value=lambda: "token123"))
+    monkeypatch.setattr(
+        get_settings(), "instagram_access_token", MagicMock(get_secret_value=lambda: "token123")
+    )
     monkeypatch.setattr(get_settings(), "instagram_user_id", "17841400000000000")
     monkeypatch.setattr(get_settings(), "instagram_api_version", "v21.0")
     monkeypatch.setattr(get_settings(), "instagram_graph_url", "https://graph.facebook.com")
@@ -61,7 +68,10 @@ async def test_publish_instagram_post_success(monkeypatch):
 
     mock_post.side_effect = [res1, res2]
 
-    with patch("httpx.AsyncClient.post", mock_post), patch("httpx.AsyncClient.get", AsyncMock(return_value=res_status)):
+    with (
+        patch("httpx.AsyncClient.post", mock_post),
+        patch("httpx.AsyncClient.get", AsyncMock(return_value=res_status)),
+    ):
         result = await publish_instagram_post_async(
             image_url="https://example.com/item.jpg",
             caption="Awesome Product",
@@ -73,9 +83,11 @@ async def test_publish_instagram_post_success(monkeypatch):
         assert result["platform"] == "instagram"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_publish_instagram_post_container_failure(monkeypatch):
-    monkeypatch.setattr(get_settings(), "instagram_access_token", MagicMock(get_secret_value=lambda: "token123"))
+    monkeypatch.setattr(
+        get_settings(), "instagram_access_token", MagicMock(get_secret_value=lambda: "token123")
+    )
     monkeypatch.setattr(get_settings(), "instagram_user_id", "17841400000000000")
 
     res1 = MagicMock()

@@ -1,263 +1,372 @@
+"""Demo Checkout and Authoritative Test Payment Routes."""
+
 import hashlib
-from datetime import UTC, datetime
+import logging
+import secrets
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.session import get_db
+from app.db.session import transaction_session
+from app.modules.commerce.lifecycle import mark_order_paid_from_verified_payment
 from app.modules.commerce.models import CheckoutSession, Order, OrderItem
-from app.modules.identity.models import Business, Buyer
+from app.modules.identity.models import Business, Buyer, StoreProfile
+from app.modules.invoices.models import Invoice
+from app.modules.invoices.pdf import render_invoice_pdf
+from app.modules.invoices.service import _allocate_number
+from app.modules.payments.models import Payment
+from app.modules.whatsapp.service import send_whatsapp_media, send_whatsapp_message
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["checkout"])
 
 
-def _rupees(paise: int) -> str:
-    return f"₹{paise / 100:,.2f}"
+def get_db():
+    with transaction_session() as session:
+        yield session
+
+
+def prepare_checkout_session(db: Session, business_id: UUID, order_id: UUID) -> dict[str, str]:
+    """Cryptographically generate a token and record CheckoutSession."""
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+    expires_at = datetime.now(UTC) + timedelta(hours=24)
+
+    checkout_session = CheckoutSession(
+        business_id=business_id,
+        order_id=order_id,
+        token_hash=token_hash,
+        status="pending",
+        expires_at=expires_at,
+    )
+    db.add(checkout_session)
+    db.flush()
+
+    return {
+        "raw_token": raw_token,
+        "payment_url": f"/pay/{raw_token}",
+        "expires_at": expires_at.isoformat(),
+    }
 
 
 @router.get("/pay/{token}", response_class=HTMLResponse)
-async def view_checkout(token: str, request: Request, db: Session = Depends(get_db)):
-    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-    checkout_session = db.scalar(
-        select(CheckoutSession).where(CheckoutSession.token_hash == token_hash)
-    )
-    if not checkout_session:
-        raise HTTPException(status_code=404, detail="Checkout session not found.")
+def get_checkout_page(token: str, db: Session = Depends(get_db)):
+    """Render mobile-first demo checkout page."""
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    session_rec = db.scalar(select(CheckoutSession).where(CheckoutSession.token_hash == token_hash))
 
-    order = db.scalar(select(Order).where(Order.id == checkout_session.order_id))
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found.")
-
-    business = db.scalar(select(Business).where(Business.id == order.business_id))
-    buyer = db.scalar(select(Buyer).where(Buyer.id == order.buyer_id))
-
-    order_items = db.scalars(select(OrderItem).where(OrderItem.order_id == order.id)).all()
-
-    total_paise = sum(item.unit_price_paise * int(item.quantity) for item in order_items)
-
-    if checkout_session.status == "completed":
+    if not session_rec:
         return HTMLResponse(
-            content=f"""
-        <html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-        <script src="https://cdn.tailwindcss.com"></script></head>
-        <body class="bg-gray-50 flex items-center justify-center min-h-screen font-sans">
-        <div class="bg-white p-8 rounded-2xl shadow-md max-w-md w-full text-center border border-gray-100">
-            <div class="text-indigo-500 mb-6 flex justify-center">
-                <svg class="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Payment Successful</h1>
-            <p class="text-gray-500 mb-8">Thank you, {buyer.display_name or "Customer"}! Your order has been placed.</p>
-
-            <div class="bg-gray-50 rounded-xl p-4 mb-6 text-left">
-                <p class="text-sm text-gray-500 mb-1">Order Number</p>
-                <p class="font-semibold text-gray-800 mb-4">#{str(order.id)[:8]}</p>
-                <p class="text-sm text-gray-500 mb-1">Amount Paid</p>
-                <p class="font-semibold text-indigo-600 text-xl">{_rupees(total_paise)}</p>
-            </div>
-
-            <div class="text-left">
-                <h3 class="font-semibold text-gray-700 mb-2">Delivery To:</h3>
-                <p class="text-gray-600 text-sm">{order.delivery_address.get("address_line", "")}</p>
-                <p class="text-gray-600 text-sm">{order.delivery_address.get("city", "")} {order.delivery_address.get("pincode", "")}</p>
-            </div>
-        </div>
-        </body></html>
-        """
+            "<html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h2>Invalid Payment Link</h2><p>This checkout link is not valid.</p></body></html>",
+            status_code=404,
         )
 
-    if checkout_session.expires_at < datetime.now(UTC):
-        checkout_session.status = "expired"
-        db.commit()
-        raise HTTPException(status_code=400, detail="Checkout link expired.")
+    if session_rec.status == "completed":
+        return HTMLResponse(
+            f"<html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h2 style='color:green;'>Payment Completed ✅</h2><p>Order #{session_rec.order_id} has already been paid.</p></body></html>"
+        )
 
-    if checkout_session.status == "expired":
-        raise HTTPException(status_code=400, detail="Checkout link expired.")
+    now = datetime.now(UTC)
+    if session_rec.expires_at < now or session_rec.status == "expired":
+        return HTMLResponse(
+            "<html><body style='font-family:sans-serif;text-align:center;padding:50px;'><h2 style='color:red;'>Link Expired</h2><p>This payment link has expired.</p></body></html>",
+            status_code=400,
+        )
+
+    order = db.scalar(select(Order).where(Order.id == session_rec.order_id))
+    business = db.scalar(select(Business).where(Business.id == session_rec.business_id))
+
+    items = db.scalars(select(OrderItem).where(OrderItem.order_id == order.id)).all()
+
+    total_paise = sum(item.unit_price_paise * item.quantity for item in items)
+    total_rupees = total_paise / 100.0
+
+    store_name = business.display_name if business else "Demo Store"
 
     items_html = ""
-    for item in order_items:
+    for item in items:
+        price = item.unit_price_paise / 100.0
+        variant_desc = f" ({item.size_snapshot})" if item.size_snapshot else ""
         items_html += f"""
-        <div class="flex justify-between items-center py-3 border-b border-gray-100 last:border-0">
+        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #eee;">
             <div>
-                <p class="font-medium text-gray-800">{item.name_snapshot}</p>
-                <p class="text-sm text-gray-500">Qty: {item.quantity}</p>
+                <strong>{item.name_snapshot}{variant_desc}</strong>
+                <div style="font-size:0.85em;color:#666;">Qty: {item.quantity} × ₹{price:.2f}</div>
             </div>
-            <p class="font-semibold text-gray-800">{_rupees(item.unit_price_paise * int(item.quantity))}</p>
+            <div style="font-weight:600;">₹{price * item.quantity:.2f}</div>
         </div>
         """
 
-    html = f"""
+    address_str = "Standard Delivery"
+    if order.delivery_address and isinstance(order.delivery_address, dict):
+        street = order.delivery_address.get("street", "")
+        city = order.delivery_address.get("city", "")
+        address_str = f"{street}, {city}".strip(", ")
+
+    html_content = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Checkout - {business.display_name}</title>
-        <script src="https://cdn.tailwindcss.com"></script>
+        <title>{store_name} - Demo Payment</title>
+        <style>
+            * {{ box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+            body {{ background-color: #f4f6f8; margin: 0; padding: 20px; display: flex; justify-content: center; }}
+            .card {{ background: #ffffff; max-width: 440px; width: 100%; border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }}
+            .badge {{ background: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 0.8em; font-weight: bold; text-align: center; margin-bottom: 16px; }}
+            .header {{ text-align: center; margin-bottom: 20px; }}
+            .header h1 {{ margin: 0; font-size: 1.4em; color: #1a1a1a; }}
+            .total-box {{ background: #f8f9fa; padding: 16px; border-radius: 12px; text-align: center; margin: 20px 0; }}
+            .total-amount {{ font-size: 2em; font-weight: 700; color: #0f172a; margin-top: 4px; }}
+            .btn {{ background: #2563eb; color: #ffffff; border: none; width: 100%; padding: 16px; border-radius: 12px; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: background 0.2s; }}
+            .btn:hover {{ background: #1d4ed8; }}
+            .footer {{ text-align: center; margin-top: 16px; font-size: 0.8em; color: #94a3b8; }}
+        </style>
     </head>
-    <body class="bg-gray-50 min-h-screen text-gray-800 font-sans">
-        <div class="max-w-md mx-auto bg-white min-h-screen shadow-sm md:my-8 md:min-h-fit md:rounded-xl md:shadow-lg overflow-hidden flex flex-col">
-            <div class="bg-indigo-600 p-6 text-white text-center rounded-b-3xl shadow-md z-10 relative">
-                <span class="absolute top-4 right-4 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded shadow-sm tracking-wide">TEST PAYMENT</span>
-                <h1 class="text-2xl font-bold mt-2">{business.display_name}</h1>
-                <p class="text-indigo-100 text-sm mt-1">Order #{str(order.id)[:8]}</p>
+    <body>
+        <div class="card">
+            <div class="badge">TEST PAYMENT DEMO</div>
+            <div class="header">
+                <h1>{store_name}</h1>
+                <p style="color:#64748b;margin:4px 0 0 0;font-size:0.9em;">Order #{str(order.id)[:8]}</p>
             </div>
 
-            <div class="p-6 flex-1 -mt-4 pt-8 bg-gray-50 rounded-t-3xl relative z-0">
-                <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100">
-                    <h2 class="text-sm uppercase tracking-wider text-gray-400 font-semibold mb-3">Order Summary</h2>
-                    {items_html}
-
-                    <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
-                        <span class="font-bold text-gray-800">Total</span>
-                        <span class="font-bold text-2xl text-indigo-600">{_rupees(total_paise)}</span>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100">
-                    <h2 class="text-sm uppercase tracking-wider text-gray-400 font-semibold mb-3">Delivery Details</h2>
-                    <p class="text-gray-800 font-medium">{buyer.display_name or "Customer"}</p>
-                    <p class="text-gray-600 text-sm mt-1">{order.delivery_address.get("address_line", "")}</p>
-                    <p class="text-gray-600 text-sm">{order.delivery_address.get("city", "")} {order.delivery_address.get("pincode", "")}</p>
-                </div>
+            <div style="margin-bottom:16px;">
+                <div style="font-size:0.85em;color:#64748b;margin-bottom:4px;">Delivery To</div>
+                <div style="font-weight:500;color:#334155;">{address_str}</div>
             </div>
 
-            <div class="p-6 bg-white border-t border-gray-100">
-                <form method="POST" action="/api/pay/test/{token}">
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-md transition duration-200 flex items-center justify-center space-x-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-                        </svg>
-                        <span>Complete Test Payment</span>
-                    </button>
-                </form>
-                <p class="text-center text-xs text-gray-400 mt-4">
-                    This is a demo environment. No real money will be charged.
-                </p>
+            <div style="margin-top:20px;">
+                {items_html}
+            </div>
+
+            <div class="total-box">
+                <div style="font-size:0.85em;color:#64748b;">Total Amount Due</div>
+                <div class="total-amount">₹{total_rupees:.2f}</div>
+            </div>
+
+            <button class="btn" onclick="payNow()">Pay Now (Test Mode)</button>
+
+            <div class="footer">
+                Powered by StockAware Commerce System
             </div>
         </div>
+
+        <script>
+            function payNow() {{
+                const btn = document.querySelector('.btn');
+                btn.disabled = true;
+                btn.innerText = 'Processing Payment...';
+                fetch('/api/pay/test/{token}', {{ method: 'POST' }})
+                    .then(r => r.json())
+                    .then(data => {{
+                        if (data.status === 'success' || data.status === 'already_paid') {{
+                            document.body.innerHTML = `
+                                <div class="card" style="text-align:center;padding:40px 20px;">
+                                    <div style="font-size:3em;margin-bottom:12px;">✅</div>
+                                    <h2 style="color:#0f172a;margin:0;">Payment Successful!</h2>
+                                    <p style="color:#64748b;">Your order #${{data.order_id.slice(0,8)}} is confirmed. Check WhatsApp for your invoice!</p>
+                                </div>
+                            `;
+                        }} else {{
+                            alert('Payment failed: ' + (data.error || 'Unknown error'));
+                            btn.disabled = false;
+                            btn.innerText = 'Pay Now (Test Mode)';
+                        }}
+                    }})
+                    .catch(err => {{
+                        alert('Network error during payment.');
+                        btn.disabled = false;
+                        btn.innerText = 'Pay Now (Test Mode)';
+                    }});
+            }}
+        </script>
     </body>
     </html>
     """
-    return HTMLResponse(content=html)
+    return HTMLResponse(html_content)
 
 
 @router.post("/api/pay/test/{token}")
-async def process_test_payment(
-    token: str, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)
-):
-    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+def process_test_payment(token: str, db: Session = Depends(get_db)):
+    """Authoritative test payment completion endpoint."""
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
 
-    # 1. Fetch Session with lock
-    checkout_session = db.scalar(
+    # 1. Lock checkout session row
+    session_rec = db.scalar(
         select(CheckoutSession).where(CheckoutSession.token_hash == token_hash).with_for_update()
     )
 
-    if not checkout_session:
-        raise HTTPException(status_code=404, detail="Checkout session not found.")
+    if not session_rec:
+        raise HTTPException(status_code=404, detail="Checkout session not found")
 
-    if checkout_session.status == "completed":
-        return RedirectResponse(url=f"/pay/{token}", status_code=303)
+    if session_rec.status == "completed":
+        existing_inv = db.scalar(
+            select(Invoice).where(
+                Invoice.business_id == session_rec.business_id,
+                Invoice.order_id == session_rec.order_id,
+            )
+        )
+        inv_num = (
+            existing_inv.invoice_number
+            if existing_inv
+            else f"INV-{str(session_rec.order_id)[:8].upper()}"
+        )
+        return {
+            "status": "already_paid",
+            "order_id": str(session_rec.order_id),
+            "invoice_number": inv_num,
+        }
 
-    if checkout_session.expires_at < datetime.now(UTC):
-        checkout_session.status = "expired"
-        db.commit()
-        raise HTTPException(status_code=400, detail="Checkout link expired.")
+    now = datetime.now(UTC)
+    if session_rec.expires_at < now or session_rec.status == "expired":
+        session_rec.status = "expired"
+        db.flush()
+        raise HTTPException(status_code=400, detail="Checkout session expired")
 
-    if checkout_session.status == "expired":
-        raise HTTPException(status_code=400, detail="Checkout link expired.")
+    # Load Order & server-side derived amounts
+    order = db.scalar(
+        select(Order)
+        .where(Order.business_id == session_rec.business_id, Order.id == session_rec.order_id)
+        .with_for_update()
+    )
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
 
-    # 2. Fetch Order with lock
-    order = db.scalar(select(Order).where(Order.id == checkout_session.order_id).with_for_update())
-    if not order or order.status != "pending_payment":
-        raise HTTPException(status_code=400, detail="Order is not pending payment.")
+    business = db.scalar(select(Business).where(Business.id == session_rec.business_id))
+    profile = db.scalar(
+        select(StoreProfile).where(StoreProfile.business_id == session_rec.business_id)
+    )
+    buyer = db.scalar(select(Buyer).where(Buyer.id == order.buyer_id))
 
-    business_id = checkout_session.business_id
+    items = db.scalars(select(OrderItem).where(OrderItem.order_id == order.id)).all()
+    total_paise = sum(item.unit_price_paise * item.quantity for item in items)
+    if total_paise <= 0:
+        raise HTTPException(status_code=400, detail="Invalid order total amount")
 
-    # 3. Mark CheckoutSession completed
-    checkout_session.status = "completed"
-    checkout_session.completed_at = datetime.now(UTC)
+    # 2. Persist authoritative Payment record using existing Payment model conventions
+    payment = db.scalar(
+        select(Payment).where(
+            Payment.business_id == session_rec.business_id,
+            Payment.order_id == session_rec.order_id,
+        )
+    )
+    if not payment:
+        ref_id = f"test_ref_{str(session_rec.order_id)[:8]}"
+        pay_id = f"test_pay_{str(session_rec.order_id)[:8]}"
+        payment = Payment(
+            business_id=session_rec.business_id,
+            order_id=session_rec.order_id,
+            status="PAID",
+            amount_paise=total_paise,
+            currency="INR",
+            provider_account_key="test_demo_account",  # pragma: allowlist secret
+            provider_reference_id=ref_id,
+            provider_payment_id=pay_id,
+            link_expires_at=now + timedelta(hours=24),
+            paid_at=now,
+        )
+        db.add(payment)
+        db.flush()
 
-    # 4. Mark Order PAID
-    order.status = "processing"
+    # 3. Transition Order to PAID
+    mark_order_paid_from_verified_payment(
+        db, session_rec.business_id, session_rec.order_id, payment.id
+    )
 
-    # 5. Promote Buyer
-    buyer = db.scalar(select(Buyer).where(Buyer.id == order.buyer_id).with_for_update())
+    # 4. Promote Buyer to customer
     if buyer:
         buyer.is_customer = True
 
+    # 5. Persist durable Invoice record using existing Invoice & InvoiceSequence models
+    invoice = db.scalar(
+        select(Invoice).where(
+            Invoice.business_id == session_rec.business_id,
+            Invoice.order_id == session_rec.order_id,
+        )
+    )
+    if not invoice:
+        invoice_number = _allocate_number(db, business, now)
+        snapshot = {
+            "invoice_number": invoice_number,
+            "issued_at": now.isoformat(),
+            "seller": {
+                "legal_name": business.display_name if business else "Rehbar Clothing",
+                "billing_address": profile.address_line
+                if profile and profile.address_line
+                else "Mumbai, India",
+            },
+            "buyer": {
+                "legal_name": buyer.display_name or buyer.whatsapp_e164 or "Customer"
+                if buyer
+                else "Customer",
+                "billing_address": str(order.delivery_address or "Standard Delivery"),
+            },
+            "provider_payment_id": payment.provider_payment_id,
+            "items": [
+                {
+                    "sku": item.sku_snapshot or "ITEM",
+                    "name": f"{item.name_snapshot}"
+                    + (f" ({item.size_snapshot})" if item.size_snapshot else ""),
+                    "quantity": str(item.quantity),
+                    "taxable_paise": item.unit_price_paise * item.quantity,
+                    "tax_paise": 0,
+                }
+                for item in items
+            ],
+            "total_paise": total_paise,
+        }
+        pdf_bytes = render_invoice_pdf(snapshot)
+        artifact_sha = hashlib.sha256(pdf_bytes).hexdigest()
+        artifact_key = f"invoices/{session_rec.business_id}/{invoice_number}.pdf"
+
+        invoice = Invoice(
+            business_id=session_rec.business_id,
+            order_id=session_rec.order_id,
+            payment_id=payment.id,
+            invoice_number=invoice_number,
+            status="GENERATED",
+            currency="INR",
+            total_paise=total_paise,
+            snapshot=snapshot,
+            artifact_key=artifact_key,
+            artifact_sha256=artifact_sha,
+            issued_at=now,
+            generated_at=now,
+        )
+        db.add(invoice)
+
+    # 6. Mark CheckoutSession completed
+    session_rec.status = "completed"
+    session_rec.completed_at = now
+
+    # 7. COMMIT DB TRANSACTION BEFORE ANY NETWORK / WHATSAPP CALLS
     db.commit()
 
-    # Fire off async task to send WhatsApp message and generate Invoice
-    background_tasks.add_task(
-        handle_successful_payment_async,
-        business_id=business_id,
-        order_id=order.id,
-        buyer_id=buyer.id,
-    )
-
-    return RedirectResponse(url=f"/pay/{token}", status_code=303)
-
-
-async def handle_successful_payment_async(business_id: UUID, order_id: UUID, buyer_id: UUID):
-    from pathlib import Path
-
-    from app.core.config import get_settings
-    from app.db.session import SessionLocal
-    from app.modules.invoices.service import InvoiceDraft, generate_invoice_pdf_artifact
-    from app.modules.whatsapp.client import send_message, send_text_message
-
-    with SessionLocal() as db:
-        order = db.scalar(select(Order).where(Order.id == order_id))
-        buyer = db.scalar(select(Buyer).where(Buyer.id == buyer_id))
-        order_items = db.scalars(select(OrderItem).where(OrderItem.order_id == order_id)).all()
-
-        # 1. Send immediate confirmation WhatsApp message
-        message_text = f"Payment received ✅\nOrder #{str(order.id)[:8]} placed successfully.\n\nAapki invoice generate ho rahi hai."
-
+    # 8. POST-COMMIT WHATSAPP MESSAGING (network errors will NOT roll back committed DB state)
     if buyer and buyer.whatsapp_e164:
-        await send_text_message(to=buyer.whatsapp_e164, text=message_text)
+        try:
+            text_msg = f"Payment received ✅\nOrder #{str(order.id)[:8]} placed successfully."
+            send_whatsapp_message(buyer.whatsapp_e164, text_msg)
 
-    with SessionLocal() as db:
-        total_paise = sum(item.unit_price_paise * int(item.quantity) for item in order_items)
+            send_whatsapp_media(
+                to=buyer.whatsapp_e164,
+                media_url=f"/invoices/{invoice.id}/artifact",
+                caption=f"Invoice #{invoice.invoice_number}",
+                message_type="document",
+                filename=f"Invoice-{invoice.invoice_number}.pdf",
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to send post-commit WhatsApp notification: {exc}")
 
-        # 2. Generate Invoice
-        line_items = [
-            {
-                "name": item.name_snapshot,
-                "quantity": item.quantity,
-                "unit": "pcs",
-                "unit_price_paise": item.unit_price_paise,
-                "line_total_paise": item.unit_price_paise * int(item.quantity),
-                "tax_paise": 0,
-            }
-            for item in order_items
-        ]
-
-        draft = InvoiceDraft(
-            invoice_number=f"INV-TEST-{str(order.id)[:8].upper()}",
-            run_id=str(order.id),
-            buyer_name=buyer.display_name or "Customer",
-            total_paise=total_paise,
-            issued_at=datetime.now(UTC),
-            line_items=line_items,
-            payment_reference="TEST_PAYMENT",
-        )
-
-        settings = get_settings()
-        artifact_root = Path(settings.invoice_artifact_root)
-        invoice_artifact = generate_invoice_pdf_artifact(draft, artifact_root)
-
-        # 3. Send WhatsApp Invoice
-        pdf_url = f"{settings.public_artifact_base_url}/{invoice_artifact.artifact_key}"
-
-    if buyer and buyer.whatsapp_e164:
-        await send_message(
-            to=buyer.whatsapp_e164,
-            message_type="document",
-            link=pdf_url,
-            caption="Yeh rahi aapki order invoice. Thank you for shopping with us! 🛍️",
-            filename=f"Invoice_{draft.invoice_number}.pdf",
-        )
+    return {
+        "status": "success",
+        "order_id": str(session_rec.order_id),
+        "invoice_number": invoice.invoice_number,
+    }
