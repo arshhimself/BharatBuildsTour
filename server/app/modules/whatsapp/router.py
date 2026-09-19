@@ -41,9 +41,20 @@ async def receive_webhook(
     request: Request, db: Annotated[Session, Depends(get_db)]
 ) -> dict[str, str]:
     raw_body = await request.body()
-    secret = get_settings().whatsapp_app_secret.get_secret_value()
+    settings = get_settings()
+    secrets = [
+        settings.whatsapp_app_secret.get_secret_value(),
+        settings.whatsapp_test_app_secret.get_secret_value(),
+    ]
     signature = request.headers.get("X-Hub-Signature-256", "")
-    if not verify_meta_signature(raw_body, signature, secret):
+    
+    valid_signature = False
+    for secret in secrets:
+        if secret and verify_meta_signature(raw_body, signature, secret):
+            valid_signature = True
+            break
+            
+    if not valid_signature:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid webhook signature"
         )

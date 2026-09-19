@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     # Meta signs webhook POSTs with this application secret using
     # X-Hub-Signature-256. It is intentionally distinct from per-number tokens.
     whatsapp_app_secret: SecretStr = SecretStr("")
+    whatsapp_test_app_secret: SecretStr = SecretStr("")
     admin_whatsapp_numbers: str = ""
     admin_whatsapp_phone_number_ids: str = ""
     whatsapp_phone_number_business_ids: str = ""
