@@ -215,8 +215,7 @@ def _get_database_overview(db: Session) -> dict:
         select(Product, Inventory)
         .outerjoin(
             Inventory,
-            (Inventory.business_id == Product.business_id)
-            & (Inventory.product_id == Product.id),
+            (Inventory.business_id == Product.business_id) & (Inventory.product_id == Product.id),
         )
         .order_by(Product.name)
         .limit(12)

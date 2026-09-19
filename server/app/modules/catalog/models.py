@@ -17,9 +17,39 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+
+class ProductVariant(Base):
+    __tablename__ = "product_variants"
+    __table_args__ = (
+        UniqueConstraint(
+            "business_id", "product_id", "sku", name="uq_product_variants_business_product_sku"
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = mapped_column(
+        ForeignKey("businesses.id", ondelete="RESTRICT"), nullable=False
+    )
+    product_id: Mapped[UUID] = mapped_column(
+        ForeignKey("products.id", ondelete="CASCADE"), nullable=False
+    )
+    sku: Mapped[str] = mapped_column(String(80), nullable=False)
+    size: Mapped[str | None] = mapped_column(String(32))
+    color: Mapped[str | None] = mapped_column(String(32))
+    price_override_paise: Mapped[int | None] = mapped_column(BigInteger)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    product: Mapped["Product"] = relationship(back_populates="variants")
 
 
 class Product(Base):
@@ -62,6 +92,9 @@ class Product(Base):
     )
     category_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
+    )
+    variants: Mapped[list["ProductVariant"]] = relationship(
+        back_populates="product", cascade="all, delete-orphan"
     )
 
 
@@ -125,3 +158,28 @@ class ProductSubstitute(Base):
     substitute_product_id: Mapped[UUID] = mapped_column(nullable=False)
     rank: Mapped[int] = mapped_column(Integer, nullable=False)
     reason: Mapped[str | None] = mapped_column(String(255))
+
+
+class ProductMedia(Base):
+    __tablename__ = "product_media"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["business_id", "product_id"],
+            ["products.business_id", "products.id"],
+            ondelete="CASCADE",
+            name="fk_product_media_business_product",
+        ),
+        Index("ix_product_media_business_product", "business_id", "product_id"),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = mapped_column(nullable=False)
+    product_id: Mapped[UUID] = mapped_column(nullable=False)
+    media_type: Mapped[str] = mapped_column(String(32), nullable=False, server_default="image")
+    url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    alt_text: Mapped[str | None] = mapped_column(String(255))
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

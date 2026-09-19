@@ -322,10 +322,7 @@ async def handle_webhook_payload(db: Session, payload: dict) -> None:
                     admin_wa_ids=settings.admin_wa_ids,
                     vendor_wa_ids=settings.vendor_wa_ids,
                 )
-            elif (
-                context.experience is WhatsAppExperience.OWNER_MANAGER
-                and not is_admin_sender
-            ):
+            elif context.experience is WhatsAppExperience.OWNER_MANAGER and not is_admin_sender:
                 outbound = [
                     runs_service.OutboundMessage(
                         to=message["wa_id"],

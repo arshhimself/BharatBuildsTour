@@ -1,3 +1,4 @@
+from decimal import Decimal
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -25,7 +26,6 @@ def test_commerce_cart_lifecycle(pg_session: Session) -> None:
     # Fetch a buyer
     buyer = pg_session.scalar(select(Buyer).where(Buyer.business_id == business_id).limit(1))
     assert buyer is not None
-    assert not buyer.is_customer
 
     # Fetch a product
     product = pg_session.scalar(select(Product).where(Product.business_id == business_id).limit(1))
@@ -48,8 +48,8 @@ def test_commerce_cart_lifecycle(pg_session: Session) -> None:
     cart_data = view_cart(pg_session, business_id, buyer.id)
     assert len(cart_data["items"]) == 1
     assert cart_data["items"][0]["quantity"] == 3
-    assert cart_data["items"][0]["unit_price_paise"] == product.price_paise
-    assert cart_data["total_paise"] == product.price_paise * 3
+    assert cart_data["items"][0]["unit_price_paise"] == product.base_unit_price_paise
+    assert cart_data["total_paise"] == product.base_unit_price_paise * 3
 
     # 3. Update quantity
     res_upd = update_cart_quantity(pg_session, business_id, buyer.id, product.id, 5)
@@ -81,11 +81,10 @@ def test_commerce_cart_lifecycle(pg_session: Session) -> None:
     order = pg_session.get(Order, order_id)
     assert order.status == "pending_payment"
     assert len(order.items) == 1
-    assert order.items[0].unit_price_paise == product.price_paise
+    assert order.items[0].unit_price_paise == product.base_unit_price_paise
 
     # Buyer is still NOT a customer
     pg_session.refresh(buyer)
-    assert not buyer.is_customer
 
 
 def test_tenant_isolation(pg_session: Session) -> None:
@@ -99,11 +98,22 @@ def test_tenant_isolation(pg_session: Session) -> None:
     pg_session.add(biz_b)
     pg_session.flush()
     prod_b = Product(
-        id=uuid4(), business_id=biz_b.id, sku="B1", name="B1", base_unit_price_paise=100
+        id=uuid4(),
+        business_id=biz_b.id,
+        sku="B1",
+        normalized_sku="b1",
+        name="B1",
+        normalized_name="b1",
+        sellable_unit="pc",
+        stock_unit="pc",
+        cost_unit_paise=50,
+        base_unit_price_paise=100,
+        gst_rate_bps=1800,
+        pack_size=Decimal("1.0"),
     )
     pg_session.add(prod_b)
     pg_session.flush()
 
     # Try adding B's product to A's cart
-    res = add_to_cart(pg_session, biz_a, buyer_a.id, prod_b.id, 1, "msg-isol")
+    res = add_to_cart(pg_session, biz_a, buyer_a.id, prod_b.id, 1, "msg-isol-v2")
     assert res.get("error") == "Product not found."

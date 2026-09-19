@@ -71,3 +71,27 @@ class Buyer(Base):
     is_customer: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
     source: Mapped[str | None] = mapped_column(String(64))
     last_contacted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class StoreProfile(Base):
+    __tablename__ = "store_profiles"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = mapped_column(
+        ForeignKey("businesses.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    display_name: Mapped[str | None] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(String(1000))
+    store_type: Mapped[str | None] = mapped_column(String(128))
+    address_line: Mapped[str | None] = mapped_column(String(512))
+    city: Mapped[str | None] = mapped_column(String(128))
+    support_number: Mapped[str | None] = mapped_column(String(32))
+    opening_hours: Mapped[str | None] = mapped_column(String(255))
+    delivery_info: Mapped[str | None] = mapped_column(String(1000))
+    return_policy: Mapped[str | None] = mapped_column(String(1000))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )

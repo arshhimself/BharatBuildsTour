@@ -104,7 +104,10 @@ def test_admin_database_question_returns_database_snapshot(monkeypatch) -> None:
                 "inventory_rows": 3,
                 "low_stock_items": 1,
             },
-            "run_status_counts": {RunStatus.QUOTE_SENT.value: 1, RunStatus.PAYMENT_PENDING.value: 1},
+            "run_status_counts": {
+                RunStatus.QUOTE_SENT.value: 1,
+                RunStatus.PAYMENT_PENDING.value: 1,
+            },
             "sample_products": [
                 {
                     "sku": "LED-9W",

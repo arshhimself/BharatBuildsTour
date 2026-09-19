@@ -47,12 +47,12 @@ def test_reserve_available_stock(pg_session: Session, business_id, product_id):
     # Setup dummy business and product for FKs
     db.execute(
         text(
-            f"INSERT INTO businesses (id, name, timezone) VALUES ('{business_id}', 'Test Biz', 'UTC') ON CONFLICT DO NOTHING"
+            f"INSERT INTO businesses (id, display_name, timezone) VALUES ('{business_id}', 'Test Biz', 'UTC') ON CONFLICT DO NOTHING"
         )
     )
     db.execute(
         text(
-            f"INSERT INTO products (id, business_id, sku, name) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'Product 1') ON CONFLICT DO NOTHING"
+            f"INSERT INTO products (id, business_id, sku, normalized_sku, name, normalized_name, sellable_unit, stock_unit, cost_unit_paise, base_unit_price_paise, gst_rate_bps, pack_size) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'sku-1', 'Product 1', 'product 1', 'pc', 'pc', 1000, 2000, 1800, 1) ON CONFLICT DO NOTHING"
         )
     )
 
@@ -69,7 +69,7 @@ def test_reserve_available_stock(pg_session: Session, business_id, product_id):
     buyer_id = uuid4()
     db.execute(
         text(
-            f"INSERT INTO buyers (id, business_id, is_customer) VALUES ('{buyer_id}', '{business_id}', false) ON CONFLICT DO NOTHING"
+            f"INSERT INTO buyers (id, business_id, display_name, is_customer) VALUES ('{buyer_id}', '{business_id}', 'Test Buyer', false) ON CONFLICT DO NOTHING"
         )
     )
 
@@ -111,12 +111,12 @@ def test_concurrent_reservations_last_unit(pg_session: Session, business_id, pro
     buyer_id = uuid4()
     db.execute(
         text(
-            f"INSERT INTO businesses (id, name, timezone) VALUES ('{business_id}', 'Test Biz', 'UTC') ON CONFLICT DO NOTHING"
+            f"INSERT INTO businesses (id, display_name, timezone) VALUES ('{business_id}', 'Test Biz', 'UTC') ON CONFLICT DO NOTHING"
         )
     )
     db.execute(
         text(
-            f"INSERT INTO products (id, business_id, sku, name) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'Product 1') ON CONFLICT DO NOTHING"
+            f"INSERT INTO products (id, business_id, sku, normalized_sku, name, normalized_name, sellable_unit, stock_unit, cost_unit_paise, base_unit_price_paise, gst_rate_bps, pack_size) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'sku-1', 'Product 1', 'product 1', 'pc', 'pc', 1000, 2000, 1800, 1) ON CONFLICT DO NOTHING"
         )
     )
     inv = Inventory(
@@ -130,7 +130,7 @@ def test_concurrent_reservations_last_unit(pg_session: Session, business_id, pro
 
     db.execute(
         text(
-            f"INSERT INTO buyers (id, business_id, is_customer) VALUES ('{buyer_id}', '{business_id}', false) ON CONFLICT DO NOTHING"
+            f"INSERT INTO buyers (id, business_id, display_name, is_customer) VALUES ('{buyer_id}', '{business_id}', 'Test Buyer', false) ON CONFLICT DO NOTHING"
         )
     )
 
@@ -174,12 +174,12 @@ def test_release_and_expire(pg_session: Session, business_id, product_id):
     buyer_id = uuid4()
     db.execute(
         text(
-            f"INSERT INTO businesses (id, name, timezone) VALUES ('{business_id}', 'Test Biz', 'UTC') ON CONFLICT DO NOTHING"
+            f"INSERT INTO businesses (id, display_name, timezone) VALUES ('{business_id}', 'Test Biz', 'UTC') ON CONFLICT DO NOTHING"
         )
     )
     db.execute(
         text(
-            f"INSERT INTO products (id, business_id, sku, name) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'Product 1') ON CONFLICT DO NOTHING"
+            f"INSERT INTO products (id, business_id, sku, normalized_sku, name, normalized_name, sellable_unit, stock_unit, cost_unit_paise, base_unit_price_paise, gst_rate_bps, pack_size) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'sku-1', 'Product 1', 'product 1', 'pc', 'pc', 1000, 2000, 1800, 1) ON CONFLICT DO NOTHING"
         )
     )
     inv = Inventory(
@@ -192,7 +192,7 @@ def test_release_and_expire(pg_session: Session, business_id, product_id):
     db.commit()
     db.execute(
         text(
-            f"INSERT INTO buyers (id, business_id, is_customer) VALUES ('{buyer_id}', '{business_id}', false) ON CONFLICT DO NOTHING"
+            f"INSERT INTO buyers (id, business_id, display_name, is_customer) VALUES ('{buyer_id}', '{business_id}', 'Test Buyer', false) ON CONFLICT DO NOTHING"
         )
     )
 
@@ -258,12 +258,12 @@ def test_consume_reservation(pg_session: Session, business_id, product_id):
     buyer_id = uuid4()
     db.execute(
         text(
-            f"INSERT INTO businesses (id, name, timezone) VALUES ('{business_id}', 'Test Biz', 'UTC') ON CONFLICT DO NOTHING"
+            f"INSERT INTO businesses (id, display_name, timezone) VALUES ('{business_id}', 'Test Biz', 'UTC') ON CONFLICT DO NOTHING"
         )
     )
     db.execute(
         text(
-            f"INSERT INTO products (id, business_id, sku, name) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'Product 1') ON CONFLICT DO NOTHING"
+            f"INSERT INTO products (id, business_id, sku, normalized_sku, name, normalized_name, sellable_unit, stock_unit, cost_unit_paise, base_unit_price_paise, gst_rate_bps, pack_size) VALUES ('{product_id}', '{business_id}', 'SKU-1', 'sku-1', 'Product 1', 'product 1', 'pc', 'pc', 1000, 2000, 1800, 1) ON CONFLICT DO NOTHING"
         )
     )
     inv = Inventory(
@@ -276,7 +276,7 @@ def test_consume_reservation(pg_session: Session, business_id, product_id):
     db.commit()
     db.execute(
         text(
-            f"INSERT INTO buyers (id, business_id, is_customer) VALUES ('{buyer_id}', '{business_id}', false) ON CONFLICT DO NOTHING"
+            f"INSERT INTO buyers (id, business_id, display_name, is_customer) VALUES ('{buyer_id}', '{business_id}', 'Test Buyer', false) ON CONFLICT DO NOTHING"
         )
     )
 
@@ -324,7 +324,7 @@ def test_consume_reservation(pg_session: Session, business_id, product_id):
     OrderItem(
         order=order3,
         product_id=product_id,
-        quantity=10,
+        quantity=8,
         unit_price_paise=100,
         sku_snapshot="S",
         name_snapshot="P",
@@ -335,8 +335,24 @@ def test_consume_reservation(pg_session: Session, business_id, product_id):
     reserve_order_stock(db, business_id, order3.id, expires_in_minutes=-5)
     db.commit()
 
+    order4 = Order(business_id=business_id, buyer_id=buyer_id)
+    OrderItem(
+        order=order4,
+        product_id=product_id,
+        quantity=2,
+        unit_price_paise=100,
+        sku_snapshot="S",
+        name_snapshot="P",
+    )
+    db.add(order4)
+    db.commit()
+    reserve_order_stock(db, business_id, order4.id)
+    db.commit()
+    consume_order_reservations(db, business_id, order4.id, "pay-order4")
+    db.commit()
+
     success = consume_order_reservations(db, business_id, order3.id, "pay-2")
     db.commit()
     assert (
         success is False
-    )  # reconciliation required because 10 > 8 on hand and reservation expired
+    )  # reconciliation required because 8 requested but only 6 on hand and reservation expired

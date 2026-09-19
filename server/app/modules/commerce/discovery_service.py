@@ -51,6 +51,10 @@ def _context(
     arguments: dict[str, Any] | None = None,
     shown_product_ids: list[str] | None = None,
     selected_product_id: str | None = None,
+    cart_id: str | None = None,
+    order_id: str | None = None,
+    checkout_stage: str | None = None,
+    quantity: int | None = None,
 ) -> dict[str, Any]:
     return {
         "version": _CONTEXT_VERSION,
@@ -60,6 +64,10 @@ def _context(
         ),
         "shown_product_ids": shown_product_ids or [],
         "selected_product_id": selected_product_id,
+        "cart_id": cart_id,
+        "order_id": order_id,
+        "checkout_stage": checkout_stage,
+        "quantity": quantity,
     }
 
 
@@ -97,7 +105,8 @@ def _catalog_result(
     arguments: dict[str, Any],
     intro: str,
     empty_text: str,
-) -> OutboundMessage:
+    db: Session | None = None,
+) -> list[OutboundMessage]:
     visible = products[:_RESULT_LIMIT]
     context = _context(
         route,
@@ -107,8 +116,36 @@ def _catalog_result(
         selected_product_id=visible[0]["id"] if len(visible) == 1 else None,
     )
     if not visible:
-        return _outbound(wa_id, empty_text, context)
-    return _outbound(wa_id, _product_list_text(visible, intro=intro), context)
+        return [_outbound(wa_id, empty_text, context)]
+
+    outbound_messages = []
+
+    # Check if we should send an image (e.g. if single product or first product has image)
+    # Actually, we can attach images for all visible products, but let's just send the image of the first one if there's only one.
+    if len(visible) == 1 and db is not None:
+        import uuid
+
+        from app.modules.catalog.models import ProductMedia
+
+        try:
+            prod_id = uuid.UUID(visible[0]["id"])
+            media = db.scalar(
+                select(ProductMedia)
+                .where(ProductMedia.product_id == prod_id, ProductMedia.active.is_(True))
+                .order_by(ProductMedia.sort_order.asc())
+                .limit(1)
+            )
+            if media and media.url:
+                msg = OutboundMessage(
+                    to=wa_id, message_type="image", link=media.url, caption=visible[0]["name"]
+                )
+                msg.commerce_context = context
+                outbound_messages.append(msg)
+        except Exception:
+            logger.exception(f"Failed to fetch media for product {visible[0]['id']}")
+
+    outbound_messages.append(_outbound(wa_id, _product_list_text(visible, intro=intro), context))
+    return outbound_messages
 
 
 def process_customer_commerce_message(
@@ -119,14 +156,41 @@ def process_customer_commerce_message(
     text_body: str,
 ) -> list[OutboundMessage]:
     """Resolve a Lead and execute read-only discovery using trusted tenant tools."""
-    resolve_or_create_whatsapp_buyer(db, business_id, wa_id)
+    buyer = resolve_or_create_whatsapp_buyer(db, business_id, wa_id)
     previous = _load_reference_state(db, business_id, phone_number_id, wa_id)
     logger.info("customer commerce message received", extra={"phone_number_id": phone_number_id})
     ai_turn = customer_salesperson_chat(
-        db, business_id, phone_number_id, wa_id, text_body, previous
+        db, business_id, buyer.id, phone_number_id, wa_id, text_body, previous
     )
     if ai_turn is not None:
-        return [
+        outbound_messages = []
+
+        # Check if we should send an image (e.g. if single product or first product has image)
+        if len(ai_turn.shown_product_ids) == 1 or ai_turn.selected_product_id:
+            import uuid
+
+            from app.modules.catalog.models import ProductMedia
+
+            target_id_str = ai_turn.selected_product_id or ai_turn.shown_product_ids[0]
+            try:
+                prod_id = uuid.UUID(target_id_str)
+                media = db.scalar(
+                    select(ProductMedia)
+                    .where(ProductMedia.product_id == prod_id, ProductMedia.active == True)
+                    .order_by(ProductMedia.sort_order.asc())
+                    .limit(1)
+                )
+                if media and media.url:
+                    img_msg = OutboundMessage(
+                        to=wa_id,
+                        message_type="image",
+                        link=media.url,
+                    )
+                    outbound_messages.append(img_msg)
+            except Exception:
+                logger.exception(f"Failed to fetch media for product {target_id_str}")
+
+        outbound_messages.append(
             _outbound(
                 wa_id,
                 ai_turn.text,
@@ -136,11 +200,16 @@ def process_customer_commerce_message(
                     arguments=ai_turn.tool_call.get("arguments", {}) if ai_turn.tool_call else None,
                     shown_product_ids=ai_turn.shown_product_ids,
                     selected_product_id=ai_turn.selected_product_id,
+                    cart_id=ai_turn.cart_id,
+                    order_id=ai_turn.order_id,
+                    checkout_stage=ai_turn.checkout_stage,
+                    quantity=ai_turn.quantity,
                 ),
             )
-        ]
+        )
+        return outbound_messages
     request = interpret_discovery_message(text_body)
-    tools = {tool.name: tool for tool in build_commerce_tools(db, business_id)}
+    tools = {tool.name: tool for tool in build_commerce_tools(db, business_id, buyer.id)}
 
     # Deterministic fallback remains category-aware: resolve only real tenant
     # categories, never a category guessed from customer prose.
@@ -154,17 +223,16 @@ def process_customer_commerce_message(
         arguments = {"category_name": matching_category, "limit": _RESULT_LIMIT}
         category_result = tools["browse_category"].invoke(arguments)
         products = category_result.get("products", [])
-        return [
-            _catalog_result(
-                wa_id,
-                DiscoveryKind.BROWSE,
-                products,
-                tool_name="browse_category",
-                arguments=arguments,
-                intro=f"{category_result['category']['name']} mein ye real options hain:",
-                empty_text=f"{matching_category} category mein abhi active products nahi hain.",
-            )
-        ]
+        return _catalog_result(
+            wa_id,
+            DiscoveryKind.BROWSE,
+            products,
+            tool_name="browse_category",
+            arguments=arguments,
+            intro=f"{category_result['category']['name']} mein ye real options hain:",
+            empty_text=f"{matching_category} category mein abhi active products nahi hain.",
+            db=db,
+        )
 
     logger.info(
         "Commerce discovery route selected",
@@ -183,35 +251,33 @@ def process_customer_commerce_message(
     if request.kind is DiscoveryKind.BROWSE:
         arguments = {"limit": _RESULT_LIMIT}
         products = tools["browse_catalog"].invoke(arguments)
-        return [
-            _catalog_result(
-                wa_id,
-                request.kind,
-                products,
-                tool_name="browse_catalog",
-                arguments=arguments,
-                intro="Bilkul! Hamare real catalog se kuch options:",
-                empty_text="Abhi active catalog products available nahi hain.",
-            )
-        ]
+        return _catalog_result(
+            wa_id,
+            request.kind,
+            products,
+            tool_name="browse_catalog",
+            arguments=arguments,
+            intro="Bilkul! Hamare real catalog se kuch options:",
+            empty_text="Abhi active catalog products available nahi hain.",
+            db=db,
+        )
 
     if request.kind is DiscoveryKind.SEARCH:
         arguments = {"query": request.query}
         products = tools["search_products"].invoke(arguments)
-        return [
-            _catalog_result(
-                wa_id,
-                request.kind,
-                products,
-                tool_name="search_products",
-                arguments=arguments,
-                intro=f'"{request.query}" ke liye ye real matches mile:',
-                empty_text=(
-                    f'Mujhe catalog mein "{request.query}" nahi mila. '
-                    "Koi category, use-case ya doosra product naam batao."
-                ),
-            )
-        ]
+        return _catalog_result(
+            wa_id,
+            request.kind,
+            products,
+            tool_name="search_products",
+            arguments=arguments,
+            intro=f'"{request.query}" ke liye ye real matches mile:',
+            empty_text=(
+                f'Mujhe catalog mein "{request.query}" nahi mila. '
+                "Koi category, use-case ya doosra product naam batao."
+            ),
+            db=db,
+        )
 
     if request.kind is DiscoveryKind.PRICE_FILTER:
         max_price_paise = request.max_price_paise
@@ -231,17 +297,16 @@ def process_customer_commerce_message(
             "limit": _RESULT_LIMIT,
         }
         products = tools["filter_products_by_price"].invoke(arguments)
-        return [
-            _catalog_result(
-                wa_id,
-                request.kind,
-                products,
-                tool_name="filter_products_by_price",
-                arguments=arguments,
-                intro="Aapke budget ke andar ye real options mile:",
-                empty_text="Is budget range mein koi active product nahi mila.",
-            )
-        ]
+        return _catalog_result(
+            wa_id,
+            request.kind,
+            products,
+            tool_name="filter_products_by_price",
+            arguments=arguments,
+            intro="Aapke budget ke andar ye real options mile:",
+            empty_text="Is budget range mein koi active product nahi mila.",
+            db=db,
+        )
 
     shown_ids = [value for value in previous.get("shown_product_ids", []) if isinstance(value, str)]
     selected_id = previous.get("selected_product_id")

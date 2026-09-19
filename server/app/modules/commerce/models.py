@@ -66,6 +66,9 @@ class CartItem(Base):
     product_id: Mapped[UUID] = mapped_column(
         ForeignKey("products.id", ondelete="RESTRICT"), nullable=False
     )
+    variant_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="RESTRICT")
+    )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -123,8 +126,13 @@ class OrderItem(Base):
     product_id: Mapped[UUID] = mapped_column(
         ForeignKey("products.id", ondelete="RESTRICT"), nullable=False
     )
+    variant_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="RESTRICT")
+    )
     sku_snapshot: Mapped[str] = mapped_column(String(255), nullable=False)
     name_snapshot: Mapped[str] = mapped_column(String(255), nullable=False)
+    size_snapshot: Mapped[str | None] = mapped_column(String(255))
+    color_snapshot: Mapped[str | None] = mapped_column(String(255))
     unit_price_paise: Mapped[int] = mapped_column(BigInteger, nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
@@ -183,3 +191,28 @@ class Fulfilment(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
     )
+
+
+class CheckoutSession(Base):
+    __tablename__ = "checkout_sessions"
+    __table_args__ = (
+        UniqueConstraint("business_id", "token_hash", name="uq_checkout_sessions_token_hash"),
+        CheckConstraint(
+            "status IN ('pending', 'completed', 'expired')", name="ck_checkout_sessions_status"
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = mapped_column(
+        ForeignKey("businesses.id", ondelete="RESTRICT"), nullable=False
+    )
+    order_id: Mapped[UUID] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"), nullable=False
+    )
+    token_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="pending")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
