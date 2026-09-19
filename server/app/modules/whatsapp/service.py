@@ -282,7 +282,6 @@ async def handle_webhook_payload(db: Session, payload: dict) -> None:
 
         is_admin_sender = message["wa_id"] in settings.admin_wa_ids
         is_vendor_sender = message["wa_id"] in settings.vendor_wa_ids
-        is_admin_bot = message["phone_number_id"] in settings.admin_phone_number_ids
         business_id = settings.whatsapp_business_by_phone_number_id.get(message["phone_number_id"])
 
         decision = route_message(
@@ -323,7 +322,10 @@ async def handle_webhook_payload(db: Session, payload: dict) -> None:
                     admin_wa_ids=settings.admin_wa_ids,
                     vendor_wa_ids=settings.vendor_wa_ids,
                 )
-            elif is_admin_bot and not is_admin_sender:
+            elif (
+                context.experience is WhatsAppExperience.OWNER_MANAGER
+                and not is_admin_sender
+            ):
                 outbound = [
                     runs_service.OutboundMessage(
                         to=message["wa_id"],
@@ -340,7 +342,7 @@ async def handle_webhook_payload(db: Session, payload: dict) -> None:
                 decision_actor_source = decision.actor_source
                 decision_matched_rule = decision.matched_rule
                 decision_requires_exact_run_id = decision.requires_exact_run_id
-            elif is_admin_sender or decision.actor is ActorType.ADMIN:
+            elif context.experience is WhatsAppExperience.OWNER_MANAGER:
                 outbound = runs_service.process_admin_message(
                     db,
                     message["wa_id"],

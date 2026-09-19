@@ -10,10 +10,10 @@ from app.core.config import get_settings
 from app.modules.runs import cart_flow, mock_desks
 from app.modules.runs.agent_team import (
     agentcraft_events_from_run_events,
-    run_agentcraft_commerce_events,
 )
 from app.modules.runs.intent_router import ActorType, IntentType, RouteDecision, route_message
 from app.modules.runs.manager_graph import manager_chat
+from app.modules.runs.manager_tools import _get_database_overview
 from app.modules.runs.models import Run
 from app.modules.runs.phrasing import phrase
 from app.modules.runs.repository import (
@@ -46,6 +46,11 @@ _ASSIGN_VENDOR_RE = re.compile(r"^assign\s+vendor\s+(rfq-\S+)(?:\s+(.+))?$", re.
 _CREATE_REMINDER_RE = re.compile(r"^create\s+reminder\s+(rfq-\S+)(?:\s+(.+))?$", re.IGNORECASE)
 _PENDING_PAYMENTS_RE = re.compile(r"^show\s+pending\s+payments$", re.IGNORECASE)
 _LOW_STOCK_RE = re.compile(r"^show\s+low\s+stock$", re.IGNORECASE)
+_DATABASE_OVERVIEW_RE = re.compile(
+    r"\b(database|db|data)\b.*\b(what|show|list|inside|have|contains|overview)\b|"
+    r"\b(what|show|list)\b.*\b(database|db|data)\b",
+    re.IGNORECASE,
+)
 
 HELP_TEXT = (
     "Sorry, I didn't recognize that command. Try an exact admin command such as approve, reject, "
@@ -694,6 +699,52 @@ def _low_stock_text() -> str:
     return "\n".join(lines)
 
 
+def _database_overview_text(db: Session | None) -> str:
+    if db is None:
+        return "I can check the database once the live store is connected."
+
+    overview = _get_database_overview(db)
+    counts = overview["counts"]
+    lines = [
+        "Database snapshot from the Manager:",
+        (
+            f"- Runs: {counts['runs']} | Products: {counts['products']} "
+            f"({counts['active_products']} active) | Inventory rows: {counts['inventory_rows']}"
+        ),
+    ]
+    if overview["run_status_counts"]:
+        status_text = ", ".join(
+            f"{status}: {count}" for status, count in overview["run_status_counts"].items()
+        )
+        lines.append(f"- Run statuses: {status_text}")
+
+    products = overview["sample_products"][:5]
+    if products:
+        lines.append("- Products the Stock Desk sees:")
+        for product in products:
+            stock = product["stock_qty"] if product["stock_qty"] is not None else "not tracked"
+            price = product["unit_price"] if product["unit_price"] is not None else "not priced"
+            lines.append(f"  {product['sku']} - {product['name']} | stock {stock} | price {price}")
+
+    recent_runs = overview["recent_runs"][:3]
+    if recent_runs:
+        lines.append("- Recent runs:")
+        for run in recent_runs:
+            total = f" | total {run['total']}" if run["total"] is not None else ""
+            lines.append(f"  {run['run_id']} - {run['status']}{total}")
+
+    low_stock = overview["low_stock"][:3]
+    if low_stock:
+        lines.append("- Low stock:")
+        for item in low_stock:
+            lines.append(
+                f"  {item['sku']} - {item['name']} "
+                f"({item['stock_qty']} <= {item['reorder_threshold']})"
+            )
+
+    return "\n".join(lines)
+
+
 def _record_ops_command(
     db: Session,
     run_id: str,
@@ -747,6 +798,8 @@ def process_admin_message(
         return [OutboundMessage(admin_wa_id, _pending_payments_text(db))]
     if _LOW_STOCK_RE.match(stripped):
         return [OutboundMessage(admin_wa_id, _low_stock_text())]
+    if _DATABASE_OVERVIEW_RE.search(stripped):
+        return [OutboundMessage(admin_wa_id, _database_overview_text(db))]
     if m := _SEND_PAYMENT_LINK_RE.match(stripped):
         if db is None:
             return [OutboundMessage(admin_wa_id, "Payment-link actions need the live run store.")]
@@ -870,18 +923,7 @@ def get_agentcraft_events(
     if business_id is not None and run.business_id != business_id:
         return None
     timeline_events = get_timeline(db, run)
-    actual_events = agentcraft_events_from_run_events(run_id=run.run_id, run_events=timeline_events)
-    if actual_events:
-        return actual_events
-    text = run.raw_text or ", ".join(
-        f"{item.get('quantity') or ''} {item.get('name') or item.get('requested_text') or ''}"
-        for item in run.line_items
-    )
-    return run_agentcraft_commerce_events(
-        run_id=run.run_id,
-        text=text.strip() or run.run_id,
-        started_at=run.created_at,
-    )
+    return agentcraft_events_from_run_events(run_id=run.run_id, run_events=timeline_events)
 
 
 def get_run_timeline(db: Session, run_id: str):

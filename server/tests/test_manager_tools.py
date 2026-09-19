@@ -41,6 +41,7 @@ def _tools_by_name():
 
 def test_manager_tool_catalog_contains_only_expected_read_tools() -> None:
     assert set(_tools_by_name()) == {
+        "get_database_overview",
         "get_run_status",
         "why_run_blocked",
         "get_quote_details",
@@ -56,6 +57,7 @@ def test_manager_tool_catalog_contains_only_expected_read_tools() -> None:
         "get_run_timeline",
         "get_orders_in_progress",
         "get_reminders_due",
+        "get_active_conversations",
         "search_customer",
         "get_business_team",
         "get_mvp_team",
@@ -150,6 +152,7 @@ def test_list_based_manager_tools(monkeypatch) -> None:
             status=RunStatus.QUOTE_SENT.value,
             buyer_wa_id="buyer-1",
             quote_snapshot={"total": "100.00"},
+            created_at=datetime.now(UTC),
         ),
         FakeRun(
             run_id="RFQ-2",

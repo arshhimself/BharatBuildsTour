@@ -41,7 +41,7 @@ def test_agentcraft_events_can_come_from_actual_run_events() -> None:
     assert events[0]["message"] == "Parsed line items"
 
 
-def test_agentcraft_events_are_business_scoped(monkeypatch) -> None:
+def test_agentcraft_events_are_business_scoped_and_never_fabricated(monkeypatch) -> None:
     run = FakeRun()
     monkeypatch.setattr(service, "get_run_by_run_id", lambda db, run_id: run)
     monkeypatch.setattr(service, "get_timeline", lambda db, found_run: [])
@@ -49,8 +49,7 @@ def test_agentcraft_events_are_business_scoped(monkeypatch) -> None:
     events = service.get_agentcraft_events(object(), "RFQ-1042", business_id=run.business_id)
     wrong_business = service.get_agentcraft_events(object(), "RFQ-1042", business_id=uuid4())
 
-    assert events
-    assert events[0]["run_id"] == "RFQ-1042"
+    assert events == []
     assert wrong_business is None
 
 

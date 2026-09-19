@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { Bot, Hash, Send, Users, Volume1, Volume2, VolumeX } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { ROLE_TO_CHAR } from '../config'
 import { getSpritePath, useTheme, toggleTheme, getTheme, themedDisplayName } from '../theme'
 
@@ -128,28 +131,48 @@ const SlackChat: React.FC<SlackChatProps> = ({ messages, muted, volume, onToggle
 
   const displayed = messages.slice(-12)
   const onlineCount = new Set(messages.slice(-20).filter(m => !m.isSystem).map(m => m.sender)).size
+  const sendCurrentMessage = useCallback(() => {
+    const trimmed = inputText.trim()
+    if (!trimmed) return
+
+    if (trimmed === '/the-office' || trimmed === '/theoffice') {
+      toggleTheme()
+      const nowOn = getTheme() === 'office'
+      onSendMessage?.(nowOn ? '🧻 Dunder Mifflin mode: ON. Identity theft is not a joke.' : '🔁 Office theme: OFF')
+    } else {
+      onSendMessage?.(trimmed)
+    }
+
+    setInputText('')
+    setShowSlashHint(false)
+  }, [inputText, onSendMessage])
 
   return (
     <div className="slack-panel">
       <div className="slack-header">
-        <div className="slack-channel-icon">#</div>
-        <span className="slack-channel-name">office-general</span>
+        <div className="slack-channel-icon"><Hash /></div>
+        <div className="slack-channel-meta">
+          <span className="slack-channel-name">office-general</span>
+          <span className="slack-channel-subtitle">Manager and agents</span>
+        </div>
         <div className="slack-header-right">
-          <div className="slack-online-dot" />
-          <span className="slack-online-count">{onlineCount}</span>
-          <div
+          <Badge variant="success" className="slack-online-badge">
+            <Users />
+            {onlineCount}
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
             className={`slack-cron-toggle ${cronPaused ? 'paused' : 'active'}`}
             onClick={toggleCron}
             title={cronPaused ? 'Chat monitor paused — click to resume' : 'Chat monitor active — click to pause'}
           >
-            <div className="slack-cron-track">
-              <div className="slack-cron-thumb" />
-            </div>
+            <Bot />
             <span className="slack-cron-label">{cronPaused ? 'AI Off' : 'AI On'}</span>
-          </div>
-          <button className="slack-mute-btn" onClick={onToggleMute}>
-            {muted ? '🔇' : volume < 0.4 ? '🔈' : '🔊'}
-          </button>
+          </Button>
+          <Button className="slack-mute-btn" variant="ghost" size="icon-sm" onClick={onToggleMute} title={muted ? 'Unmute' : 'Mute'}>
+            {muted ? <VolumeX /> : volume < 0.4 ? <Volume1 /> : <Volume2 />}
+          </Button>
           <input
             type="range"
             min="0"
@@ -272,21 +295,22 @@ const SlackChat: React.FC<SlackChatProps> = ({ messages, muted, volume, onToggle
                 return
               }
               if (e.key === 'Enter' && inputText.trim()) {
-                const trimmed = inputText.trim()
-                // Client-side slash commands — not sent to backend
-                if (trimmed === '/the-office' || trimmed === '/theoffice') {
-                  toggleTheme()
-                  const nowOn = getTheme() === 'office'
-                  onSendMessage?.(nowOn ? '🧻 Dunder Mifflin mode: ON. Identity theft is not a joke.' : '🔁 Office theme: OFF')
-                } else {
-                  onSendMessage?.(trimmed)
-                }
-                setInputText('')
-                setShowSlashHint(false)
+                sendCurrentMessage()
               }
             }}
             onBlur={() => setTimeout(() => setShowSlashHint(false), 150)}
           />
+          <Button
+            className="slack-send-btn"
+            variant="ghost"
+            size="icon-sm"
+            onMouseDown={e => e.preventDefault()}
+            onClick={sendCurrentMessage}
+            title="Send message"
+            disabled={!inputText.trim()}
+          >
+            <Send />
+          </Button>
         </div>
       </div>
     </div>

@@ -9,12 +9,15 @@ gated behind the admin typing the exact command themselves
 (process_admin_message's regex match, tried before the agent ever runs).
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.modules.catalog.models import Product
+from app.modules.inventory.models import Inventory
 from app.modules.runs import mock_desks
 from app.modules.runs.agent_team import (
     list_agents,
@@ -22,8 +25,10 @@ from app.modules.runs.agent_team import (
     run_commerce_conversation,
     run_daily_summary_conversation,
 )
+from app.modules.runs.models import Run
 from app.modules.runs.repository import get_run_by_run_id, get_timeline, list_runs
 from app.modules.runs.state_machine import RunStatus
+from app.modules.whatsapp.models import WhatsAppMessage
 
 
 class RunIdInput(BaseModel):
@@ -36,6 +41,13 @@ class CustomerSearchInput(BaseModel):
 
 class TextInput(BaseModel):
     text: str = Field(description="The source text to route through the agent conversation")
+
+
+class ActiveConversationsInput(BaseModel):
+    hours: int = Field(
+        default=24,
+        description="How many hours back to count. Defaults to 24.",
+    )
 
 
 def _get_run_status(db: Session, run_id: str) -> dict:
@@ -165,6 +177,73 @@ def _get_vendor_updates(db: Session) -> dict:
     }
 
 
+def _money_from_paise(value: int | None) -> str | None:
+    if value is None:
+        return None
+    return f"{value / 100:.2f}"
+
+
+def _get_database_overview(db: Session) -> dict:
+    """Return a compact, real DB-backed snapshot for broad admin questions."""
+
+    run_status_rows = db.execute(select(Run.status, func.count()).group_by(Run.status)).all()
+    products_count = db.scalar(select(func.count()).select_from(Product)) or 0
+    inventory_count = db.scalar(select(func.count()).select_from(Inventory)) or 0
+    active_products_count = (
+        db.scalar(select(func.count()).select_from(Product).where(Product.active.is_(True))) or 0
+    )
+
+    products = db.execute(
+        select(Product, Inventory)
+        .outerjoin(
+            Inventory,
+            (Inventory.business_id == Product.business_id)
+            & (Inventory.product_id == Product.id),
+        )
+        .order_by(Product.name)
+        .limit(12)
+    ).all()
+
+    recent_runs = list_runs(db)[:8]
+    low_stock = _get_low_stock_items(db)["items"][:8]
+
+    return {
+        "desk": "Database/Stock Desk",
+        "counts": {
+            "runs": sum(count for _, count in run_status_rows),
+            "products": products_count,
+            "active_products": active_products_count,
+            "inventory_rows": inventory_count,
+            "low_stock_items": len(low_stock),
+        },
+        "run_status_counts": {status: count for status, count in run_status_rows},
+        "sample_products": [
+            {
+                "sku": product.sku,
+                "name": product.name,
+                "unit": product.sellable_unit,
+                "unit_price": _money_from_paise(product.base_unit_price_paise),
+                "stock_qty": str(inventory.on_hand_qty) if inventory else None,
+                "reorder_threshold": str(inventory.reorder_threshold)
+                if inventory and inventory.reorder_threshold is not None
+                else None,
+            }
+            for product, inventory in products
+        ],
+        "recent_runs": [
+            {
+                "run_id": run.run_id,
+                "status": run.status,
+                "buyer_wa_id": run.buyer_wa_id,
+                "total": run.quote_snapshot["total"] if run.quote_snapshot else None,
+                "updated_at": run.updated_at.isoformat() if run.updated_at else None,
+            }
+            for run in recent_runs
+        ],
+        "low_stock": low_stock,
+    }
+
+
 def _get_daily_summary(db: Session) -> dict:
     return {
         "open_quotes": _get_open_quotes_today(db)["items"],
@@ -265,6 +344,38 @@ def _preview_daily_summary_conversation(db: Session) -> dict:
 
 
 def _get_inventory(db: Session) -> dict:
+    try:
+        db_items = db.execute(
+            select(Product, Inventory)
+            .outerjoin(
+                Inventory,
+                (Inventory.business_id == Product.business_id)
+                & (Inventory.product_id == Product.id),
+            )
+            .where(Product.active.is_(True))
+            .order_by(Product.name)
+        ).all()
+        if db_items:
+            return {
+                "desk": "Stock Desk",
+                "source": "database",
+                "items": [
+                    {
+                        "sku": product.sku,
+                        "name": product.name,
+                        "unit": product.sellable_unit,
+                        "unit_price": _money_from_paise(product.base_unit_price_paise),
+                        "stock_qty": str(inventory.on_hand_qty) if inventory else None,
+                        "reorder_threshold": str(inventory.reorder_threshold)
+                        if inventory and inventory.reorder_threshold is not None
+                        else None,
+                    }
+                    for product, inventory in db_items
+                ],
+            }
+    except Exception:
+        pass
+
     items = [
         {
             "sku": product["sku"],
@@ -276,10 +387,42 @@ def _get_inventory(db: Session) -> dict:
         }
         for product in mock_desks.CATALOG
     ]
-    return {"desk": "Stock Desk", "items": items}
+    return {"desk": "Stock Desk", "source": "seed_catalog_fallback", "items": items}
 
 
 def _get_low_stock_items(db: Session) -> dict:
+    try:
+        db_items = db.execute(
+            select(Product, Inventory)
+            .join(
+                Inventory,
+                (Inventory.business_id == Product.business_id)
+                & (Inventory.product_id == Product.id),
+            )
+            .where(
+                Product.active.is_(True),
+                Inventory.reorder_threshold.is_not(None),
+                Inventory.on_hand_qty <= Inventory.reorder_threshold,
+            )
+            .order_by(Product.name)
+        ).all()
+        if db_items:
+            return {
+                "desk": "Stock Desk",
+                "source": "database",
+                "items": [
+                    {
+                        "sku": product.sku,
+                        "name": product.name,
+                        "stock_qty": str(inventory.on_hand_qty),
+                        "reorder_threshold": str(inventory.reorder_threshold),
+                    }
+                    for product, inventory in db_items
+                ],
+            }
+    except Exception:
+        pass
+
     items = [
         {
             "sku": product["sku"],
@@ -290,7 +433,7 @@ def _get_low_stock_items(db: Session) -> dict:
         for product in mock_desks.CATALOG
         if product["stock_qty"] <= product["reorder_threshold"]
     ]
-    return {"desk": "Stock Desk", "items": items}
+    return {"desk": "Stock Desk", "source": "seed_catalog_fallback", "items": items}
 
 
 def _get_pending_payments(db: Session) -> dict:
@@ -307,6 +450,17 @@ def _get_pending_payments(db: Session) -> dict:
             for run in runs
         ],
     }
+
+
+def _get_active_conversations(db: Session, hours: int = 24) -> dict:
+    since = datetime.now(UTC) - timedelta(hours=hours)
+    count = db.scalar(
+        select(func.count(func.distinct(WhatsAppMessage.wa_id))).where(
+            WhatsAppMessage.direction == "in",
+            WhatsAppMessage.created_at >= since,
+        )
+    )
+    return {"hours": hours, "active_buyers": count or 0}
 
 
 def _get_open_quotes_today(db: Session) -> dict:
@@ -330,6 +484,15 @@ def _get_open_quotes_today(db: Session) -> dict:
 
 def build_tools(db: Session) -> list[StructuredTool]:
     return [
+        StructuredTool.from_function(
+            func=lambda: _get_database_overview(db),
+            name="get_database_overview",
+            description=(
+                "Answer broad admin questions like 'what is in the database', 'what data do we "
+                "have', or 'show database'. Returns real counts, sample products, recent runs, "
+                "status counts, and low-stock items from the database."
+            ),
+        ),
         StructuredTool.from_function(
             func=lambda run_id: _get_run_status(db, run_id),
             name="get_run_status",
@@ -427,6 +590,16 @@ def build_tools(db: Session) -> list[StructuredTool]:
             func=lambda: _get_reminders_due(db),
             name="get_reminders_due",
             description="List reminders due today.",
+        ),
+        StructuredTool.from_function(
+            func=lambda hours=24: _get_active_conversations(db, hours),
+            name="get_active_conversations",
+            description=(
+                "Count distinct buyers who sent a WhatsApp message in the last N hours "
+                "(default 24). Use this for 'how many people are messaging us' style "
+                "questions -- it counts anyone chatting, not just buyers with an open run."
+            ),
+            args_schema=ActiveConversationsInput,
         ),
         StructuredTool.from_function(
             func=lambda query: _search_customer(db, query),

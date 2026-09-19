@@ -92,6 +92,60 @@ def test_show_low_stock_is_exact_read_command() -> None:
     assert outbound[0].text.startswith("Low stock:")
 
 
+def test_admin_database_question_returns_database_snapshot(monkeypatch) -> None:
+    monkeypatch.setattr(
+        service,
+        "_get_database_overview",
+        lambda db: {
+            "counts": {
+                "runs": 2,
+                "products": 3,
+                "active_products": 2,
+                "inventory_rows": 3,
+                "low_stock_items": 1,
+            },
+            "run_status_counts": {RunStatus.QUOTE_SENT.value: 1, RunStatus.PAYMENT_PENDING.value: 1},
+            "sample_products": [
+                {
+                    "sku": "LED-9W",
+                    "name": "LED Bulb 9W",
+                    "unit": "piece",
+                    "unit_price": "85.00",
+                    "stock_qty": "12.000",
+                    "reorder_threshold": "10.000",
+                }
+            ],
+            "recent_runs": [
+                {
+                    "run_id": "RFQ-1042",
+                    "status": RunStatus.QUOTE_SENT.value,
+                    "buyer_wa_id": "buyer",
+                    "total": "100.00",
+                    "updated_at": None,
+                }
+            ],
+            "low_stock": [
+                {
+                    "sku": "WIRE-RED",
+                    "name": "Red Wire",
+                    "stock_qty": "2.000",
+                    "reorder_threshold": "5.000",
+                }
+            ],
+        },
+    )
+
+    outbound = process_admin_message(
+        db=object(), admin_wa_id="admin", text_body="What is in the database?"
+    )
+
+    text = outbound[0].text
+    assert "Database snapshot from the Manager" in text
+    assert "Runs: 2" in text
+    assert "LED-9W - LED Bulb 9W" in text
+    assert "RFQ-1042 - QUOTE_SENT" in text
+
+
 def test_send_payment_link_exact_command_transitions_and_sends(monkeypatch) -> None:
     run = FakeRun()
     events: list[tuple[str, dict | None]] = []
