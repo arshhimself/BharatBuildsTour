@@ -304,3 +304,48 @@ def test_reference_state_is_business_phone_and_sender_scoped(pg_session: Session
 def test_customer_commerce_path_has_no_mock_desks_dependency() -> None:
     source = inspect.getsource(discovery_service)
     assert "mock_desks" not in source
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Bhai mujhe batao batao na konse konse product hai?",
+        "Tere paas konsa product hai?",
+        "tumhare paas kya kya hai?",
+        "kya kya milta hai?",
+        "show me your products",
+    ],
+)
+def test_llm_outage_fallback_recognizes_natural_broad_browse(text: str) -> None:
+    """The fallback must not send broad customer prose to literal product search."""
+    request = interpret_discovery_message(text)
+    assert request.kind is DiscoveryKind.BROWSE
+    assert request.query is None
+
+
+def test_llm_outage_fallback_makes_cheap_followup_relative_to_selection(
+    pg_session: Session,
+) -> None:
+    phone_id = "phase2a-cheaper-number"
+    wa_id = "919700000006"
+    listed = _turn(pg_session, phone_number_id=phone_id, wa_id=wa_id, sequence=1, text="LED dikhao")
+    selected = _turn(
+        pg_session, phone_number_id=phone_id, wa_id=wa_id, sequence=2, text="second wala"
+    )
+    selected_id = selected.commerce_context["selected_product_id"]
+    selected_product = get_product(pg_session, DEMO_BUSINESS_ID, UUID(selected_id))
+    assert listed.commerce_context["shown_product_ids"] and selected_product is not None
+
+    cheaper = _turn(
+        pg_session, phone_number_id=phone_id, wa_id=wa_id, sequence=3, text="aur sasta?"
+    )
+    assert cheaper.commerce_context["tool_call"]["name"] == "filter_products_by_price"
+    assert cheaper.commerce_context["tool_call"]["arguments"]["max_price_paise"] == (
+        selected_product.base_unit_price_paise - 1
+    )
+    for product_id in cheaper.commerce_context["shown_product_ids"]:
+        product = get_product(pg_session, DEMO_BUSINESS_ID, UUID(product_id))
+        assert (
+            product is not None
+            and product.base_unit_price_paise < selected_product.base_unit_price_paise
+        )

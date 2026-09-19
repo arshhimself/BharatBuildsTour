@@ -5,9 +5,11 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.service import (
+    browse_category,
     filter_products_by_price,
     get_product,
     get_products,
+    list_categories,
     search_products,
 )
 from app.modules.inventory.schemas import InventoryCheckIn
@@ -29,6 +31,11 @@ class SearchProductsInput(BaseModel):
 class FilterProductsInput(BaseModel):
     min_price_paise: int | None = Field(default=None, ge=0)
     max_price_paise: int | None = Field(default=None, ge=0)
+    limit: int = Field(default=5, ge=1, le=20)
+
+
+class BrowseCategoryInput(BaseModel):
+    category_name: str = Field(min_length=1, max_length=120, description="A real category name")
     limit: int = Field(default=5, ge=1, le=20)
 
 
@@ -86,6 +93,15 @@ def build_commerce_tools(db: Session, business_id: UUID) -> list[StructuredTool]
         )
         return [_product_fact(product) for product in products]
 
+    def _list_categories() -> list[dict]:
+        return list_categories(db, business_id)
+
+    def _browse_category(category_name: str, limit: int = 5) -> dict:
+        category, products = browse_category(db, business_id, category_name, limit=limit)
+        if category is None:
+            return {"error": "Category not found"}
+        return {"category": category, "products": [_product_fact(product) for product in products]}
+
     def _get_product(product_id: str) -> dict:
         try:
             parsed_id = UUID(product_id)
@@ -128,6 +144,17 @@ def build_commerce_tools(db: Session, business_id: UUID) -> list[StructuredTool]
             return {"error": str(exc)}
 
     return [
+        StructuredTool.from_function(
+            func=_list_categories,
+            name="list_categories",
+            description="List real categories for this tenant before discussing a category.",
+        ),
+        StructuredTool.from_function(
+            func=_browse_category,
+            name="browse_category",
+            description="Resolve one real category name and list its active tenant products.",
+            args_schema=BrowseCategoryInput,
+        ),
         StructuredTool.from_function(
             func=_browse_catalog,
             name="browse_catalog",

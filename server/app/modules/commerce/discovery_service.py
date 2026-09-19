@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.modules.commerce.discovery import DiscoveryKind, interpret_discovery_message
+from app.modules.commerce.salesperson import customer_salesperson_chat
 from app.modules.commerce.tools import build_commerce_tools
 from app.modules.identity.service import resolve_or_create_whatsapp_buyer
 from app.modules.runs.service import OutboundMessage
@@ -119,9 +120,51 @@ def process_customer_commerce_message(
 ) -> list[OutboundMessage]:
     """Resolve a Lead and execute read-only discovery using trusted tenant tools."""
     resolve_or_create_whatsapp_buyer(db, business_id, wa_id)
+    previous = _load_reference_state(db, business_id, phone_number_id, wa_id)
+    logger.info("customer commerce message received", extra={"phone_number_id": phone_number_id})
+    ai_turn = customer_salesperson_chat(
+        db, business_id, phone_number_id, wa_id, text_body, previous
+    )
+    if ai_turn is not None:
+        return [
+            _outbound(
+                wa_id,
+                ai_turn.text,
+                _context(
+                    DiscoveryKind.CHAT,
+                    tool_name=ai_turn.tool_call["name"] if ai_turn.tool_call else None,
+                    arguments=ai_turn.tool_call.get("arguments", {}) if ai_turn.tool_call else None,
+                    shown_product_ids=ai_turn.shown_product_ids,
+                    selected_product_id=ai_turn.selected_product_id,
+                ),
+            )
+        ]
     request = interpret_discovery_message(text_body)
     tools = {tool.name: tool for tool in build_commerce_tools(db, business_id)}
-    previous = _load_reference_state(db, business_id, phone_number_id, wa_id)
+
+    # Deterministic fallback remains category-aware: resolve only real tenant
+    # categories, never a category guessed from customer prose.
+    normalized_message = " ".join(text_body.casefold().split())
+    category_names = tools["list_categories"].invoke({})
+    matching_category = next(
+        (item["name"] for item in category_names if item["name"].casefold() in normalized_message),
+        None,
+    )
+    if matching_category:
+        arguments = {"category_name": matching_category, "limit": _RESULT_LIMIT}
+        category_result = tools["browse_category"].invoke(arguments)
+        products = category_result.get("products", [])
+        return [
+            _catalog_result(
+                wa_id,
+                DiscoveryKind.BROWSE,
+                products,
+                tool_name="browse_category",
+                arguments=arguments,
+                intro=f"{category_result['category']['name']} mein ye real options hain:",
+                empty_text=f"{matching_category} category mein abhi active products nahi hain.",
+            )
+        ]
 
     logger.info(
         "Commerce discovery route selected",
@@ -171,9 +214,20 @@ def process_customer_commerce_message(
         ]
 
     if request.kind is DiscoveryKind.PRICE_FILTER:
+        max_price_paise = request.max_price_paise
+        selected_id = previous.get("selected_product_id")
+        if (
+            max_price_paise is None
+            and request.min_price_paise is None
+            and isinstance(selected_id, str)
+        ):
+            selected = tools["get_product"].invoke({"product_id": selected_id})
+            if "error" not in selected:
+                # "aur sasta" means strictly cheaper than the real current item.
+                max_price_paise = max(0, selected["price_paise"] - 1)
         arguments = {
             "min_price_paise": request.min_price_paise,
-            "max_price_paise": request.max_price_paise,
+            "max_price_paise": max_price_paise,
             "limit": _RESULT_LIMIT,
         }
         products = tools["filter_products_by_price"].invoke(arguments)

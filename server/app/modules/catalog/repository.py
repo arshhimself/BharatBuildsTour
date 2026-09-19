@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.catalog.models import Product, ProductAlias
 from app.modules.catalog.schemas import MatchType
+from app.modules.identity.owner_models import Category
 
 
 def list_products(
@@ -55,6 +56,44 @@ def filter_products_by_price(
         Product.id,
     ).limit(limit)
     return list(session.scalars(statement).all())
+
+
+def list_categories(session: Session, business_id: UUID) -> list[Category]:
+    """Return only categories owned by this tenant, in stable display order."""
+    return list(
+        session.scalars(
+            select(Category)
+            .where(Category.business_id == business_id)
+            .order_by(Category.name, Category.id)
+        ).all()
+    )
+
+
+def get_category_by_normalized_name(
+    session: Session, business_id: UUID, normalized_name: str
+) -> Category | None:
+    # Categories predate a normalized-name column, so this needs no migration.
+    for category in list_categories(session, business_id):
+        if " ".join(category.name.casefold().split()) == normalized_name:
+            return category
+    return None
+
+
+def list_products_in_category(
+    session: Session, business_id: UUID, category_id: UUID, *, limit: int
+) -> list[Product]:
+    return list(
+        session.scalars(
+            select(Product)
+            .where(
+                Product.business_id == business_id,
+                Product.category_id == category_id,
+                Product.active.is_(True),
+            )
+            .order_by(Product.sku, Product.id)
+            .limit(limit)
+        ).all()
+    )
 
 
 def exact_match_candidates(

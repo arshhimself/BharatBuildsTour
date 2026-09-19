@@ -49,6 +49,15 @@ _REQUEST_WORDS = {
     "acha",
     "available",
     "bata",
+    "bhai",
+    "na",
+    "konse",
+    "konsa",
+    "tere",
+    "tumhare",
+    "paas",
+    "milta",
+    "milte",
     "batao",
     "bechte",
     "chahiye",
@@ -80,6 +89,7 @@ _REQUEST_WORDS = {
     "wala",
     "wali",
     "you",
+    "your",
     "आप",
     "आपके",
     "क्या",
@@ -198,6 +208,8 @@ def interpret_discovery_message(text: str) -> DiscoveryRequest:
         return DiscoveryRequest(DiscoveryKind.CHAT)
 
     if token_set & _BROWSE_WORDS and not query:
+        return DiscoveryRequest(DiscoveryKind.BROWSE)
+    if not query and token_set & {"konse", "konsa", "milta", "milte", "tere", "tumhare"}:
         return DiscoveryRequest(DiscoveryKind.BROWSE)
 
     if query:
