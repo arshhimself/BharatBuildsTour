@@ -1039,8 +1039,11 @@ const App: React.FC<AgentOfficeProps> = ({ fullscreen = false }) => {
           status: visualEvent.status,
           text: visualEvent.text,
         })
-        const config = AGENT_CONFIGS[visualEvent.toAgent] ?? AGENT_CONFIGS.default
-        addMsg(config.title, visualEvent.toAgent, config.color, visualEvent.text)
+        const speakingAgent = scheduled.event.type === 'result'
+          ? visualEvent.fromAgent
+          : visualEvent.toAgent
+        const config = AGENT_CONFIGS[speakingAgent] ?? AGENT_CONFIGS.default
+        addMsg(config.title, speakingAgent, config.color, visualEvent.text)
       }, scheduled.delayMs + 1800)
       pendingTimersRef.current.push(timer)
     })

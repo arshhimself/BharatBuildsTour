@@ -41,6 +41,23 @@ def test_agentcraft_events_can_come_from_actual_run_events() -> None:
     assert events[0]["message"] == "Parsed line items"
 
 
+def test_agentcraft_events_collapse_repeated_identical_transitions() -> None:
+    events = agentcraft_events_from_run_events(
+        run_id="RFQ-1006",
+        run_events=[
+            FakeRunEvent("Stock Desk", "Parsed line items"),
+            FakeRunEvent("Manager", "Request received"),
+            FakeRunEvent("Stock Desk", "Parsed line items"),
+            FakeRunEvent("Manager", "Request received"),
+        ],
+    )
+
+    assert [event["message"] for event in events] == [
+        "Parsed line items",
+        "Request received",
+    ]
+
+
 def test_agentcraft_events_are_business_scoped_and_never_fabricated(monkeypatch) -> None:
     run = FakeRun()
     monkeypatch.setattr(service, "get_run_by_run_id", lambda db, run_id: run)

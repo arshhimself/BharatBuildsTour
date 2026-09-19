@@ -63,6 +63,14 @@ import { BOSS_NAME, BOSS_COLOR, BOSS_EMOJI } from './config'
 export const AGENT_CONFIGS: Record<string, { color: string; emoji: string; title: string }> = {
   // The boss — configured via office.config.json
   'boss':                  { color: BOSS_COLOR, emoji: BOSS_EMOJI, title: BOSS_NAME },
+  // Business-team IDs emitted by the live AgentCraft API
+  'manager':               { color: BOSS_COLOR, emoji: BOSS_EMOJI, title: 'Manager' },
+  'assistant-claude':      { color: '#cc785c', emoji: '🤖', title: 'Assistant' },
+  'inventory':             { color: '#38bdf8', emoji: '📦', title: 'Stock Desk' },
+  'pricing':               { color: '#f59e0b', emoji: '💰', title: 'Pricing Desk' },
+  'sales':                 { color: '#34d399', emoji: '📨', title: 'Sales Desk' },
+  'qa':                    { color: '#a78bfa', emoji: '🧪', title: 'Quality Desk' },
+  'accounts':              { color: '#fb7185', emoji: '🧾', title: 'Accounts Desk' },
   // Subagents
   'debugger':              { color: '#e74c3c', emoji: '🔍', title: 'Debugger' },
   'code-reviewer':         { color: '#3498db', emoji: '📋', title: 'Reviewer' },

@@ -739,11 +739,17 @@ def agentcraft_events_from_run_events(
 ) -> list[dict[str, Any]]:
     """Convert actual persisted run timeline events to AgentCraft events."""
     events = []
+    seen_transitions: set[tuple[str, str, str]] = set()
     previous_agent = "manager"
     for event in run_events:
         to_agent = AGENTCRAFT_AGENT_IDS_BY_ROLE.get(event.role, "manager")
         if to_agent == previous_agent:
             continue
+        signature = (previous_agent, to_agent, event.event.casefold().strip())
+        if signature in seen_transitions:
+            previous_agent = to_agent
+            continue
+        seen_transitions.add(signature)
         status = "working"
         event_text = event.event.casefold()
         if "approval" in event_text:
