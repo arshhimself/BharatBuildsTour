@@ -1,28 +1,63 @@
+'use client';
+
 import React from 'react';
 import { Navbar } from '@/components/landing/navbar';
 import { Hero } from '@/components/landing/hero';
-import { FeaturesSection } from '@/components/landing/features-section';
-import { TwoAgentsSection } from '@/components/landing/two-agents-section';
-import { LanguageSection } from '@/components/landing/language-section';
-import { WorkflowSection } from '@/components/landing/workflow-section';
+import { FounderVideoSection } from '@/components/landing/FounderVideoSection';
+import { MessageToMoneyWorkflow } from '@/components/landing/MessageToMoneyWorkflow';
+import { VoiceAISection } from '@/components/landing/VoiceAISection';
+import { MultiAgentSection } from '@/components/landing/MultiAgentSection';
+import { BentoCanvas } from '@/components/landing/BentoCanvas';
 import { ControlRoomPreview } from '@/components/landing/control-room-preview';
-import { RealBusinessSection } from '@/components/landing/real-business-section';
-import { CTAFooter } from '@/components/landing/cta-footer';
+import { WomensFashionStorySection } from '@/components/landing/WomensFashionStorySection';
+import { DayOneTimeline } from '@/components/landing/DayOneTimeline';
+import { EarlyAccessSection } from '@/components/landing/EarlyAccessSection';
+import { FinalCTASection } from '@/components/landing/FinalCTASection';
+import { Footer } from '@/components/landing/Footer';
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#F8FAFF] text-[#182235] font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#F8FAFF] text-slate-900 font-sans overflow-x-hidden">
+      {/* Floating Glass Navigation */}
       <Navbar />
+
       <main>
+        {/* Hero Section with Dual 3D iPhones & Agent Proof Strip */}
         <Hero />
-        <FeaturesSection />
-        <TwoAgentsSection />
-        <LanguageSection />
-        <WorkflowSection />
+
+        {/* Founder Story & Video Section */}
+        <FounderVideoSection />
+
+        {/* Scroll-Linked Product Story Workflow (01 Customer Message -> 08 Invoice Shared) */}
+        <MessageToMoneyWorkflow />
+
+        {/* Voice AI Engine Section */}
+        <VoiceAISection />
+
+        {/* The AI Team Architecture Map */}
+        <MultiAgentSection />
+
+        {/* One Simple Interface / Asymmetric Bento Grid */}
+        <BentoCanvas />
+
+        {/* Control Room / Manager Briefing Dashboard Mockup */}
         <ControlRoomPreview />
-        <RealBusinessSection />
-        <CTAFooter />
+
+        {/* Primary Business Story (Local Women's Clothing Store) */}
+        <WomensFashionStorySection />
+
+        {/* A Day With BizMate Timeline */}
+        <DayOneTimeline />
+
+        {/* Early Access Prebook Section */}
+        <EarlyAccessSection />
+
+        {/* Final CTA Banner */}
+        <FinalCTASection />
       </main>
+
+      {/* Global Footer */}
+      <Footer />
     </div>
   );
 }

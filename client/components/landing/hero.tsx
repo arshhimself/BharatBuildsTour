@@ -1,133 +1,194 @@
+'use client';
+
 import React from 'react';
-import { IPhoneFrame } from './iphone-frame';
-import { ChatBubble, QuoteCard, PaymentCard, ManagerCard } from './chat-bubbles';
-import { ArrowRight, Play, AlertCircle, TrendingUp, Clock, Package } from 'lucide-react';
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ArrowRight, Check, Sparkles, MessageCircle, TrendingUp } from 'lucide-react';
+import { Iphone3D } from './Iphone3D';
+import { WhatsAppScreen } from './WhatsAppScreen';
+import { ManagerAgentScreen } from './ManagerAgentScreen';
+
+const AGENT_STRIP = [
+  { name: 'Sales Agent', desc: 'customer conversations' },
+  { name: 'Manager Agent', desc: 'owner briefings' },
+  { name: 'Finance Agent', desc: 'bills & balances' },
+  { name: 'Operation Agent', desc: 'stock & vendors' },
+  { name: 'Social Agent', desc: 'content & growth' },
+];
 
 export function Hero() {
   return (
-    <section className="relative pt-32 pb-20 overflow-hidden bg-[#F8FAFF]">
-      {/* Soft blurred radial gradients for the premium feel */}
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-[#DFF3FF] rounded-full blur-[100px] opacity-70 -z-10 mix-blend-multiply pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-[#E9E2FF] rounded-full blur-[120px] opacity-60 -z-10 mix-blend-multiply pointer-events-none"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-white rounded-[100%] blur-[80px] opacity-80 -z-10 pointer-events-none"></div>
+    <section id="top" className="relative min-h-screen pt-28 pb-12 overflow-hidden bg-[#F8FAFF]">
+      {/* Subtle Background Light Glows */}
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 h-[500px] w-full max-w-5xl -z-10 opacity-50">
+        <div className="absolute top-12 left-1/4 h-72 w-72 rounded-full bg-indigo-200/40 blur-[100px]" />
+        <div className="absolute top-24 right-1/4 h-72 w-72 rounded-full bg-blue-200/40 blur-[100px]" />
+      </div>
 
-      <div className="max-w-[1300px] mx-auto px-6 relative z-10">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
-        {/* Desktop Layout: Left Phone | Center Content | Right Phone */}
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-8">
+        {/* Eyebrow Label */}
+        <div className="flex justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 rounded-full border border-indigo-200/80 bg-white/90 px-4 py-1.5 text-[11px] font-bold tracking-wider text-indigo-700 shadow-xs backdrop-blur-sm uppercase"
+          >
+            <span className="h-2 w-2 rounded-full bg-indigo-600 animate-pulse" />
+            <span>AI Team For Your Business</span>
+          </motion.div>
+        </div>
+
+        {/* 3-Column Desktop Grid */}
+        <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
-          {/* Mobile Order 1: Center Content */}
-          <div className="lg:order-2 flex-1 flex flex-col items-center text-center max-w-[600px] mx-auto z-20">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E9E2FF]/80 text-[#5b5bf7] font-semibold text-[11px] tracking-widest uppercase mb-8 border border-[#5b5bf7]/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#5b5bf7] animate-pulse"></span>
-              AI For Your Wholesale Business
+          {/* Left: Manager iPhone */}
+          <div className="hidden lg:flex lg:col-span-3 justify-center relative">
+            <div className="w-full max-w-[280px]">
+              <Iphone3D glowColor="rgba(99, 102, 241, 0.12)">
+                <ManagerAgentScreen />
+              </Iphone3D>
             </div>
-            
-            <h1 className="text-[44px] md:text-[56px] lg:text-[64px] font-bold text-[#182235] leading-[1.05] tracking-[-0.03em] mb-6">
-              Your WhatsApp<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#5b5bf7] to-[#8b5cf6]">Sales Assistant</span><br />
-              for Wholesale Business.
-            </h1>
-            
-            <p className="text-[18px] md:text-[20px] text-[#667085] leading-relaxed mb-10 max-w-[480px]">
-              From customer message to payment — StockAware handles the workflow.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
-              <button className="w-full sm:w-auto px-8 py-3.5 bg-[#182235] hover:bg-[#2a364a] text-white rounded-full font-semibold text-[15px] shadow-lg shadow-[#182235]/15 transition-all flex items-center justify-center gap-2 group">
-                See how it works
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button className="w-full sm:w-auto px-8 py-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-[#182235] rounded-full font-semibold text-[15px] transition-all flex items-center justify-center gap-2 shadow-sm">
-                <Play className="w-4 h-4 fill-current" />
-                Talk to StockAware
-              </button>
-            </div>
-            
-            <p className="text-[13px] text-[#667085] mt-6 font-medium">
-              No new software for your customers. Just WhatsApp.
-            </p>
-          </div>
 
-          {/* Manager Phone (Left on Desktop, below Content on Mobile) */}
-          <div className="lg:order-1 relative lg:-mr-12 xl:-mr-16 animate-[float_6s_ease-in-out_infinite]">
-            <IPhoneFrame 
-              theme="manager" 
-              headerTitle="Manager Assistant"
-              headerSubtitle="Active now"
-              className="transform lg:-rotate-6 scale-[0.85] sm:scale-90 lg:scale-100 origin-center"
+            {/* Left Floating Badge */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+              className="absolute -bottom-4 -right-4 z-20 hidden xl:flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg text-xs"
             >
-              <div className="flex flex-col h-full justify-end">
-                <ChatBubble role="agent" isManager>
-                  Good morning, Aamir 👋
-                </ChatBubble>
-                <ChatBubble role="agent" isManager>
-                  Here's what happened yesterday.
-                </ChatBubble>
-                <ChatBubble role="agent" isManager className="!bg-transparent !p-0 !border-0 !shadow-none">
-                  <div className="grid grid-cols-2 gap-2 mt-1 mb-2">
-                    <div className="bg-white border border-[#E9E2FF] rounded-lg p-2.5 shadow-sm">
-                      <TrendingUp className="w-4 h-4 text-[#059669] mb-1" />
-                      <div className="text-[10px] text-[#667085] font-medium">Sales</div>
-                      <div className="text-[14px] font-bold text-[#182235]">₹1.84L</div>
-                    </div>
-                    <div className="bg-white border border-[#E9E2FF] rounded-lg p-2.5 shadow-sm">
-                      <Package className="w-4 h-4 text-[#5b5bf7] mb-1" />
-                      <div className="text-[10px] text-[#667085] font-medium">Orders</div>
-                      <div className="text-[14px] font-bold text-[#182235]">24</div>
-                    </div>
-                  </div>
-                </ChatBubble>
-                <ChatBubble role="agent" isManager>
-                  Your attention today:
-                </ChatBubble>
-                <ChatBubble role="agent" isManager className="!bg-transparent !p-0 !border-0 !shadow-none gap-0">
-                  <ManagerCard icon="⚠️" title="Low Stock" value={<>MCB32 <span className="font-normal text-gray-500">• 8 units left</span></>} variant="alert" />
-                  <ManagerCard icon="💳" title="Pending Payments" value={<>3 customers <span className="font-normal text-gray-500">• ₹42,500</span></>} />
-                </ChatBubble>
-                <ChatBubble role="agent" isManager className="mt-4">
-                  Want me to remind the 3 customers with pending payments?
-                </ChatBubble>
-                <div className="flex gap-2 justify-end mt-2">
-                  <button className="bg-[#5b5bf7] text-white text-[12px] font-medium px-4 py-1.5 rounded-full">Yes, remind</button>
-                </div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                <MessageCircle className="h-4 w-4" />
               </div>
-            </IPhoneFrame>
-            {/* Soft decorative shadow below phone */}
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-[200px] h-[30px] bg-black/10 blur-xl rounded-full"></div>
+              <div>
+                <strong className="text-slate-900 block font-bold text-[11px]">Customer replied</strong>
+                <span className="text-slate-500 text-[10px]">Quote for 7</span>
+              </div>
+              <span className="text-emerald-500 font-bold ml-1">✓</span>
+            </motion.div>
           </div>
 
-          {/* Sales Phone (Right on Desktop, below Manager Phone on Mobile) */}
-          <div className="lg:order-3 relative lg:-ml-12 xl:-ml-16 animate-[float_7s_ease-in-out_infinite_0.5s]">
-            <IPhoneFrame 
-              theme="light" 
-              headerTitle="StockAware Sales"
-              headerSubtitle="business account"
-              className="transform lg:rotate-6 scale-[0.85] sm:scale-90 lg:scale-100 origin-center"
+          {/* Center: Hero Copy & Actions */}
+          <div className="lg:col-span-6 text-center space-y-6">
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-xs sm:text-sm font-semibold text-indigo-600 uppercase tracking-wider"
             >
-              <ChatBubble role="customer" time="09:24 AM">
-                Hi, I need 20 pieces of 32A MCB.
-              </ChatBubble>
-              <ChatBubble role="agent" time="09:24 AM">
-                Sure! We have 8 pieces available right now.<br/><br/>
-                Would you like me to check the next stock arrival or prepare a quote for 8 pieces?
-              </ChatBubble>
-              <ChatBubble role="customer" time="09:26 AM">
-                Prepare for 8 pieces only.
-              </ChatBubble>
-              <ChatBubble role="agent" time="09:26 AM">
-                Got it. I've prepared your quote.
-              </ChatBubble>
-              <QuoteCard quantity={8} product="32A MCB" total="₹3,600" />
-              <ChatBubble role="agent" time="09:27 AM">
-                Your quote is ready. Here's the payment link to confirm your order.
-              </ChatBubble>
-              <PaymentCard total="₹3,600" />
-            </IPhoneFrame>
-            <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-[200px] h-[30px] bg-black/10 blur-xl rounded-full"></div>
+              More selling. Less remembering.
+            </motion.p>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.05]"
+            >
+              Run your business.<br />
+              <span className="text-indigo-600">Not the busywork.</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mx-auto font-normal"
+            >
+              Your AI team for sales, operations, finance and growth — working quietly behind the conversations you already have.
+            </motion.p>
+
+            {/* Hero Action Buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3"
+            >
+              <a
+                href="/#product"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-indigo-600 px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/25 hover:bg-indigo-700 transition-all transform hover:scale-[1.02]"
+              >
+                <span>Watch BizMate work</span>
+                <ArrowRight className="h-4 w-4" />
+              </a>
+
+              <Link
+                href="/early-access"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-white border border-slate-300 px-6 py-3.5 text-sm font-bold text-slate-800 shadow-xs hover:bg-slate-50 transition-colors"
+              >
+                <span>Reserve early access</span>
+                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-extrabold text-indigo-600">
+                  ₹2,000
+                </span>
+              </Link>
+            </motion.div>
+
+            {/* Hero Micro Notes */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="pt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-semibold text-slate-500"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-emerald-500 stroke-[3]" />
+                Built for real businesses
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-emerald-500 stroke-[3]" />
+                One simple interface
+              </span>
+            </motion.div>
+          </div>
+
+          {/* Right: Sales iPhone */}
+          <div className="hidden lg:flex lg:col-span-3 justify-center relative">
+            <div className="w-full max-w-[280px]">
+              <Iphone3D glowColor="rgba(37, 211, 102, 0.12)">
+                <WhatsAppScreen />
+              </Iphone3D>
+            </div>
+
+            {/* Right Floating Badge */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+              className="absolute -bottom-4 -left-4 z-20 hidden xl:flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg text-xs"
+            >
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              <div>
+                <strong className="text-slate-900 block font-bold text-[11px]">Sales yesterday</strong>
+                <span className="text-slate-500 text-[10px]">₹1.84L <em className="text-emerald-600 not-italic font-bold">+12.4%</em></span>
+              </div>
+            </motion.div>
           </div>
 
         </div>
+
+        {/* Mobile View Phones (Single Centered iPhone Preview) */}
+        <div className="mt-10 lg:hidden flex justify-center">
+          <div className="w-full max-w-[300px]">
+            <Iphone3D glowColor="rgba(99, 102, 241, 0.12)">
+              <WhatsAppScreen />
+            </Iphone3D>
+          </div>
+        </div>
+
+        {/* Bottom Proof Strip / Agent Role Bar */}
+        <div className="mt-16 border-t border-slate-200/80 pt-8 pb-4 grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+          {AGENT_STRIP.map((agent) => (
+            <div key={agent.name} className="space-y-0.5">
+              <strong className="text-xs font-extrabold text-slate-900 block">{agent.name}</strong>
+              <span className="text-[11px] text-slate-500 font-medium block">{agent.desc}</span>
+            </div>
+          ))}
+        </div>
+
       </div>
     </section>
   );
