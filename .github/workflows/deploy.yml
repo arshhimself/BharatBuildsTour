@@ -1,0 +1,57 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 495791792726.dkr.ecr.ap-south-1.amazonaws.com
+  ECS_CLUSTER: stockaware
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push server image
+        uses: docker/build-push-action@v6
+        with:
+          context: server
+          file: server/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/stockaware-server:latest
+            ${{ env.ECR_REGISTRY }}/stockaware-server:${{ github.sha }}
+
+      - name: Build and push client image
+        uses: docker/build-push-action@v6
+        with:
+          context: client
+          file: client/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=https://stockaware.vaaani.co.in
+          tags: |
+            ${{ env.ECR_REGISTRY }}/stockaware-client:latest
+            ${{ env.ECR_REGISTRY }}/stockaware-client:${{ github.sha }}
+
+      - name: Deploy server service
+        run: aws ecs update-service --cluster $ECS_CLUSTER --service stockaware-server --force-new-deployment
+
+      - name: Deploy client service
+        run: aws ecs update-service --cluster $ECS_CLUSTER --service stockaware-client --force-new-deployment
+
+      - name: Wait for services to stabilize
+        run: aws ecs wait services-stable --cluster $ECS_CLUSTER --services stockaware-server stockaware-client
