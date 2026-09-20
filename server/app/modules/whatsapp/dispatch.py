@@ -1,5 +1,6 @@
 """Experience dispatch boundary. Customer commerce remains outside this phase."""
 
+import inspect
 from typing import TYPE_CHECKING, Protocol
 
 from sqlalchemy.orm import Session
@@ -39,13 +40,16 @@ def _default_customer_commerce(
     if discovery_service is None:
         raise CommerceHandlerUnavailable("customer_commerce handler is not installed")
 
-    return discovery_service.process_customer_commerce_message(
-        db,
-        business_id=context.business_id,
-        phone_number_id=context.phone_number_id,
-        wa_id=message["wa_id"],
-        text_body=message["text"],
-    )
+    process = discovery_service.process_customer_commerce_message
+    kwargs = {
+        "business_id": context.business_id,
+        "phone_number_id": context.phone_number_id,
+        "wa_id": message["wa_id"],
+        "text_body": message["text"],
+    }
+    if "inbound_message_id" in inspect.signature(process).parameters:
+        kwargs["inbound_message_id"] = message.get("message_id")
+    return process(db, **kwargs)
 
 
 customer_commerce_handler: CustomerCommerceHandler = _default_customer_commerce

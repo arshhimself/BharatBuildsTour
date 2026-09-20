@@ -9,13 +9,18 @@ from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.service import get_product
-from app.modules.commerce import discovery_service
+from app.modules.commerce import customer_service, discovery_service
 from app.modules.commerce.discovery import DiscoveryKind, interpret_discovery_message
 from app.modules.identity.models import Business, Buyer
 from app.modules.whatsapp.models import WhatsAppMessage
 from app.seed import DEMO_BUSINESS_ID
 
 pytest_plugins = ["test_phase1_postgres"]
+
+
+@pytest.fixture(autouse=True)
+def no_external_llm(monkeypatch):
+    monkeypatch.setattr(customer_service, "customer_salesperson_chat", lambda *_a, **_k: None)
 
 
 @pytest.mark.parametrize(

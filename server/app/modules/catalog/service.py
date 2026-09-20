@@ -53,6 +53,33 @@ def get_product(session: Session, business_id: UUID, product_id: UUID) -> Produc
     return _product_out(product) if product is not None else None
 
 
+def list_categories(session: Session, business_id: UUID):
+    return repository.list_categories(session, business_id)
+
+
+def resolve_category(session: Session, business_id: UUID, name: str):
+    return repository.resolve_category(session, business_id, name)
+
+
+def browse_category(
+    session: Session,
+    business_id: UUID,
+    category_name: str,
+    *,
+    limit: int = 5,
+) -> tuple[object | None, list[ProductOut]]:
+    category = resolve_category(session, business_id, category_name)
+    if category is None:
+        return None, []
+    products = repository.list_products_by_category(
+        session,
+        business_id,
+        category.id,
+        limit=max(1, min(limit, 20)),
+    )
+    return category, [_product_out(product) for product in products]
+
+
 def filter_products_by_price(
     session: Session,
     business_id: UUID,

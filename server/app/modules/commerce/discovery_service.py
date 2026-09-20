@@ -38,7 +38,7 @@ def _load_reference_state(
     )
     for row in rows:
         context = (row.payload or {}).get("commerce_context")
-        if isinstance(context, dict) and context.get("version") == _CONTEXT_VERSION:
+        if isinstance(context, dict) and context.get("version") in {_CONTEXT_VERSION, 2}:
             return context
     return {}
 
@@ -110,7 +110,7 @@ def _catalog_result(
     return _outbound(wa_id, _product_list_text(visible, intro=intro), context)
 
 
-def process_customer_commerce_message(
+def _legacy_process_customer_commerce_message(
     db: Session,
     business_id: UUID,
     phone_number_id: str,
@@ -306,3 +306,25 @@ def process_customer_commerce_message(
             "Aap product naam bolo ya 'products dikhao' likho."
         )
     return [_outbound(wa_id, text, _context(DiscoveryKind.CHAT))]
+
+
+def process_customer_commerce_message(
+    db: Session,
+    business_id: UUID,
+    phone_number_id: str,
+    wa_id: str,
+    text_body: str,
+    *,
+    inbound_message_id: str | None = None,
+) -> list[OutboundMessage]:
+    """Use the production customer salesperson; retain this module as compatibility API."""
+    from app.modules.commerce.customer_service import process_customer_commerce_message as process
+
+    return process(
+        db,
+        business_id,
+        phone_number_id,
+        wa_id,
+        text_body,
+        inbound_message_id=inbound_message_id,
+    )

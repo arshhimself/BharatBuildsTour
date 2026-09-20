@@ -82,7 +82,7 @@ def get_store_info(db: Session, business_id: UUID) -> dict:
     }
 
 
-def build_commerce_tools(db: Session, business_id: UUID) -> list[StructuredTool]:
+def _build_legacy_commerce_tools(db: Session, business_id: UUID) -> list[StructuredTool]:
     """Build read-only commerce tools bound to trusted server-side tenant context."""
 
     def _browse_catalog(limit: int = 5) -> list[dict]:
@@ -203,3 +203,22 @@ def build_commerce_tools(db: Session, business_id: UUID) -> list[StructuredTool]
             args_schema=GetStoreInfoInput,
         ),
     ]
+
+
+def build_commerce_tools(
+    db: Session,
+    business_id: UUID,
+    buyer_id: UUID | None = None,
+    message_id: str = "commerce-turn",
+    context: dict | None = None,
+) -> list[StructuredTool]:
+    """Build Number-B tools with trusted server-side tenant and buyer context."""
+    from app.modules.commerce.sales_tools import build_customer_sales_tools
+
+    return build_customer_sales_tools(
+        db,
+        business_id,
+        buyer_id=buyer_id,
+        message_id=message_id,
+        context=context,
+    )

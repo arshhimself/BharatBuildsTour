@@ -5,7 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.modules.catalog.models import Product, ProductAlias
+from app.modules.catalog.normalization import normalize_catalog_text
 from app.modules.catalog.schemas import MatchType
+from app.modules.identity.owner_models import Category
 
 
 def list_products(
@@ -30,6 +32,51 @@ def get_active_product(session: Session, business_id: UUID, product_id: UUID) ->
             Product.id == product_id,
             Product.active.is_(True),
         )
+    )
+
+
+def list_categories(session: Session, business_id: UUID) -> list[Category]:
+    return list(
+        session.scalars(
+            select(Category)
+            .where(Category.business_id == business_id)
+            .order_by(Category.name, Category.id)
+        ).all()
+    )
+
+
+def resolve_category(session: Session, business_id: UUID, name: str) -> Category | None:
+    normalized = normalize_catalog_text(name)
+    if not normalized:
+        return None
+    return next(
+        (
+            category
+            for category in list_categories(session, business_id)
+            if normalize_catalog_text(category.name) == normalized
+        ),
+        None,
+    )
+
+
+def list_products_by_category(
+    session: Session,
+    business_id: UUID,
+    category_id: UUID,
+    *,
+    limit: int,
+) -> list[Product]:
+    return list(
+        session.scalars(
+            select(Product)
+            .where(
+                Product.business_id == business_id,
+                Product.category_id == category_id,
+                Product.active.is_(True),
+            )
+            .order_by(Product.base_unit_price_paise, Product.sku, Product.id)
+            .limit(limit)
+        ).all()
     )
 
 
@@ -142,4 +189,36 @@ def fuzzy_match_candidates(session: Session, business_id: UUID, query: str) -> l
     )
 
     products_by_id = {p.id: p for p in direct_products + alias_products}
-    return sorted(products_by_id.values(), key=lambda p: (p.sku, str(p.id)))[:20]
+    if products_by_id:
+        return sorted(products_by_id.values(), key=lambda p: (p.sku, str(p.id)))[:20]
+
+    query_tokens = set(normalize_catalog_text(query).split())
+    if not query_tokens:
+        return []
+    rows = session.execute(
+        select(Product, ProductAlias.normalized_alias)
+        .outerjoin(
+            ProductAlias,
+            (ProductAlias.business_id == Product.business_id)
+            & (ProductAlias.product_id == Product.id),
+        )
+        .where(Product.business_id == business_id, Product.active.is_(True))
+    ).all()
+    scores: dict[UUID, tuple[int, Product]] = {}
+    for product, normalized_alias in rows:
+        candidates = [product.normalized_name, product.normalized_sku]
+        if normalized_alias:
+            candidates.append(normalized_alias)
+        score = max(len(query_tokens & set(value.split())) for value in candidates)
+        required = 1 if len(query_tokens) == 1 else 2
+        if score < required:
+            continue
+        current = scores.get(product.id)
+        if current is None or score > current[0]:
+            scores[product.id] = (score, product)
+    return [
+        item[1]
+        for item in sorted(
+            scores.values(), key=lambda item: (-item[0], item[1].sku, str(item[1].id))
+        )[:20]
+    ]

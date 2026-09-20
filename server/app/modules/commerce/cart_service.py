@@ -237,6 +237,18 @@ def checkout_cart(
         if not product:
             return {"error": f"Product {ci.product_id} no longer exists."}
 
+        has_active_variants = db.scalar(
+            select(ProductVariant.id)
+            .where(
+                ProductVariant.business_id == business_id,
+                ProductVariant.product_id == ci.product_id,
+                ProductVariant.active.is_(True),
+            )
+            .limit(1)
+        )
+        if has_active_variants and not ci.variant_id:
+            return {"error": f"Please select a size/variant for {product.name} before checkout."}
+
         if inventory and inventory.quantity_available < ci.quantity:
             return {"error": f"Insufficient stock for {product.name}."}
 
@@ -246,13 +258,35 @@ def checkout_cart(
         color_snap = None
 
         if ci.variant_id:
-            variant = db.scalar(select(ProductVariant).where(ProductVariant.id == ci.variant_id))
-            if variant:
-                if variant.price_override_paise is not None:
-                    unit_price = variant.price_override_paise
-                sku_snap = variant.sku
-                size_snap = variant.size
-                color_snap = variant.color
+            variant = db.scalar(
+                select(ProductVariant).where(
+                    ProductVariant.id == ci.variant_id,
+                    ProductVariant.business_id == business_id,
+                    ProductVariant.product_id == ci.product_id,
+                    ProductVariant.active.is_(True),
+                )
+            )
+            if not variant:
+                return {"error": f"Selected variant for {product.name} is no longer active."}
+
+            variant_inv = db.scalar(
+                select(Inventory)
+                .where(
+                    Inventory.business_id == business_id,
+                    Inventory.variant_id == ci.variant_id,
+                )
+                .with_for_update()
+            )
+            if variant_inv and variant_inv.quantity_available < ci.quantity:
+                return {
+                    "error": f"Insufficient stock for {product.name} ({variant.size or variant.color}). Only {variant_inv.quantity_available} available."
+                }
+
+            if variant.price_override_paise is not None:
+                unit_price = variant.price_override_paise
+            sku_snap = variant.sku
+            size_snap = variant.size
+            color_snap = variant.color
 
         order_item = OrderItem(
             order_id=order.id,

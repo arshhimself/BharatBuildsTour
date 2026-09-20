@@ -69,6 +69,8 @@ _REQUEST_WORDS = {
     "kuch",
     "kya",
     "main",
+    "na",
+    "waala",
     "me",
     "mein",
     "mujhe",
