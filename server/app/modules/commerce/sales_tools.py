@@ -1,6 +1,7 @@
 """Tenant-bound catalog tools exposed only to the Number-B salesperson."""
 
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from langchain_core.tools import StructuredTool
@@ -75,15 +76,27 @@ class EmptyInput(BaseModel):
     pass
 
 
-def _uuid(value: str) -> UUID | None:
-    try:
-        return UUID(value)
-    except (TypeError, ValueError):
+def _uuid(value: Any) -> UUID | None:
+    if isinstance(value, UUID):
+        return value
+    if isinstance(value, str):
+        try:
+            return UUID(value)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _quantity(value: Decimal | int | float | str | None) -> str | None:
+    if value is None:
         return None
-
-
-def _quantity(value: Decimal | None) -> str | None:
-    return str(value) if value is not None else None
+    try:
+        d = Decimal(str(value))
+        if d == d.to_integral_value():
+            return str(int(d))
+        return str(d.normalize())
+    except Exception:
+        return str(value)
 
 
 def _product_fact(db: Session, business_id: UUID, product_id: UUID) -> dict:

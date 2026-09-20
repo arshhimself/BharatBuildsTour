@@ -137,6 +137,7 @@ def add_to_cart(
         db.add(cart_item)
 
     db.flush()
+    db.expire(cart, ["items"])
     return {"status": "added", "new_quantity": new_quantity}
 
 
@@ -215,6 +216,9 @@ def checkout_cart(
         .where(Cart.business_id == business_id, Cart.buyer_id == buyer_id, Cart.status == "active")
         .with_for_update()
     )
+
+    if cart:
+        db.expire(cart, ["items"])
 
     if not cart or not cart.items:
         return {"error": "Cart is empty or not found."}

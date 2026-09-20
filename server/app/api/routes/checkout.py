@@ -31,6 +31,23 @@ def get_db():
         yield session
 
 
+def get_public_base_url() -> str:
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    if settings.public_artifact_base_url and not settings.public_artifact_base_url.startswith(
+        "http://localhost"
+    ):
+        url = settings.public_artifact_base_url.rstrip("/")
+        if url.endswith("/artifacts"):
+            url = url[:-10]
+        return url
+    for origin in settings.cors_origins:
+        if origin.startswith("https://") and "localhost" not in origin:
+            return origin.rstrip("/")
+    return "https://app.stockaware.vaaani.co.in"
+
+
 def prepare_checkout_session(db: Session, business_id: UUID, order_id: UUID) -> dict[str, str]:
     """Cryptographically generate a token and record CheckoutSession."""
     raw_token = secrets.token_urlsafe(32)
@@ -47,10 +64,12 @@ def prepare_checkout_session(db: Session, business_id: UUID, order_id: UUID) -> 
     db.add(checkout_session)
     db.flush()
 
+    base_url = get_public_base_url()
     return {
         "raw_token": raw_token,
-        "payment_url": f"/pay/{raw_token}",
+        "payment_url": f"{base_url}/pay/{raw_token}",
         "expires_at": expires_at.isoformat(),
+        "checkout_session_id": str(checkout_session.id),
     }
 
 

@@ -4,7 +4,7 @@ import hashlib
 import logging
 import re
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -367,6 +367,197 @@ def _variant_followup(
     return None
 
 
+def _is_payment_claim(text: str) -> bool:
+    norm = normalize_catalog_text(text)
+    patterns = [
+        r"\b(payment|paisa|money)\s+(ho\s+gaya|kar\s+diya|done|sent|bhej\s+diya|ho\s+gayi)\b",
+        r"\b(paid|payment\s+done|already\s+paid|done\s+payment|payment\s+sent|money\s+sent|amount\s+sent)\b",
+        r"\b(paisa|money)\s+(bheja|bhej\s+diya|dal\s+diya)\b",
+        r"\b(kar\s+diya\s+payment|payment\s+ho\s+gaya)\b",
+    ]
+    return any(re.search(p, norm) for p in patterns)
+
+
+def _is_checkout_intent(text: str) -> bool:
+    norm = normalize_catalog_text(text)
+    patterns = [
+        r"\b(checkout|check\s*out)\b",
+        r"\b(payment|pay|link)\s+(karna|karo|bhejo|de|do|bhej|bhejo\s+na)\b",
+        r"\b(proceed|kaha|kaise)\s+.*(payment|pay)\b",
+        r"\b(pay|payment)\s+(ke\s+liye|kaise|kaha)\b",
+        r"\b(order\s+place|place\s+order|buy\s+now)\b",
+        r"\b(haan|yes)\s+(proceed|checkout)\b",
+        r"\blink\s+(kaha|de|bhejo)\b",
+        r"\bproceed\s+karo\b",
+    ]
+    return any(re.search(p, norm) for p in patterns)
+
+
+def _handle_checkout_intent(
+    db: Session,
+    business_id: UUID,
+    buyer_id: UUID,
+    phone_number_id: str,
+    wa_id: str,
+    previous: dict[str, Any],
+    inbound_message_id: str | None,
+) -> list[OutboundMessage] | None:
+    from app.api.routes.checkout import prepare_checkout_session
+    from app.modules.commerce.cart_service import (
+        add_to_cart,
+        checkout_cart,
+        get_or_create_active_cart,
+    )
+    from app.modules.commerce.models import Order, OrderItem
+    from app.modules.commerce.sales_tools import _uuid
+
+    print("DEBUG _handle_checkout_intent: started")
+    # 1. Reuse existing pending order if present
+    existing_order = db.scalar(
+        select(Order)
+        .where(
+            Order.business_id == business_id,
+            Order.buyer_id == buyer_id,
+            Order.status == "pending_payment",
+        )
+        .order_by(Order.created_at.desc())
+    )
+
+    if existing_order:
+        print("DEBUG _handle_checkout_intent: existing order found", existing_order.id)
+        session_info = prepare_checkout_session(db, business_id, existing_order.id)
+        payment_url = session_info["payment_url"]
+        items = list(
+            db.scalars(select(OrderItem).where(OrderItem.order_id == existing_order.id)).all()
+        )
+        total_paise = sum(item.unit_price_paise * item.quantity for item in items)
+        total_rupees = total_paise / 100.0
+
+        state = {
+            **previous,
+            "route": "checkout",
+            "last_intent": "checkout",
+            "order_id": str(existing_order.id),
+            "checkout_session_id": session_info.get("checkout_session_id"),
+            "payment_url": payment_url,
+            "checkout_stage": "awaiting_payment",
+            "tool_call": {"name": "checkout_cart", "arguments": {}},
+        }
+        text = (
+            f"Done bhai 👍\nOrder ready hai.\n\nTotal: ₹{total_rupees:,.2f}".replace(".00", "")
+            + "\n\n"
+            f"Payment yahan kar sakte ho:\n{payment_url}\n\n"
+            f"Payment confirm hote hi order confirm karke invoice yahin bhej dunga."
+        )
+        _persist_on_inbound(db, business_id, phone_number_id, wa_id, inbound_message_id, state)
+        db.commit()
+        return _messages(wa_id, text, state, db, business_id)
+
+    # 2. No pending order. Check active cart / state
+    cart = get_or_create_active_cart(db, business_id, buyer_id)
+    selected_p_id = previous.get("selected_product_id")
+    selected_v_id = previous.get("selected_variant_id")
+
+    if cart.items and selected_v_id:
+        for ci in cart.items:
+            if not ci.variant_id and (
+                not selected_p_id or str(ci.product_id) == str(selected_p_id)
+            ):
+                ci.variant_id = _uuid(selected_v_id)
+        db.flush()
+
+    if not cart.items:
+        if not selected_p_id or not isinstance(selected_p_id, str):
+            return None
+
+        parsed_p_id = _uuid(selected_p_id)
+        if not parsed_p_id:
+            return None
+
+        p_facts = product_facts(db, business_id, [selected_p_id], limit=1)
+        if not p_facts:
+            return None
+
+        product = p_facts[0]
+        variants = product.get("variants", [])
+
+        if variants and not selected_v_id:
+            if len(variants) == 1:
+                selected_v_id = variants[0]["id"]
+            else:
+                free_sizes = [
+                    v
+                    for v in variants
+                    if v.get("size")
+                    and v["size"].lower() in {"free size", "free", "one size", "fs"}
+                ]
+                if len(free_sizes) == 1:
+                    selected_v_id = free_sizes[0]["id"]
+                else:
+                    avail_sizes = [v["size"] for v in variants if v.get("size")]
+                    size_str = ", ".join(avail_sizes) if avail_sizes else "available sizes"
+                    text = f"Bhai pehle size select kar lo 👍 (Available: {size_str})"
+                    state = {
+                        **previous,
+                        "route": "variant",
+                        "last_intent": "ask_variant",
+                        "tool_call": None,
+                    }
+                    _persist_on_inbound(
+                        db, business_id, phone_number_id, wa_id, inbound_message_id, state
+                    )
+                    db.commit()
+                    return _messages(wa_id, text, state, db, business_id)
+
+        qty = int(previous.get("quantity", 1) or 1)
+        add_res = add_to_cart(
+            db,
+            business_id,
+            buyer_id,
+            parsed_p_id,
+            quantity=qty,
+            idempotency_key=f"add_chk_{inbound_message_id or uuid4().hex[:8]}",
+            variant_id=_uuid(selected_v_id) if selected_v_id else None,
+        )
+        if "error" in add_res:
+            return None
+
+    msg_id = inbound_message_id or f"chk_{uuid4().hex[:8]}"
+    res = checkout_cart(
+        db, business_id, buyer_id, delivery_address={}, idempotency_key=f"checkout_{msg_id}"
+    )
+    if "order_id" in res:
+        order_id = UUID(res["order_id"])
+        session_info = prepare_checkout_session(db, business_id, order_id)
+        payment_url = session_info["payment_url"]
+
+        items = list(db.scalars(select(OrderItem).where(OrderItem.order_id == order_id)).all())
+        total_paise = sum(item.unit_price_paise * item.quantity for item in items)
+        total_rupees = total_paise / 100.0
+
+        state = {
+            **previous,
+            "route": "checkout",
+            "last_intent": "checkout",
+            "order_id": str(order_id),
+            "checkout_session_id": session_info.get("checkout_session_id"),
+            "payment_url": payment_url,
+            "checkout_stage": "awaiting_payment",
+            "tool_call": {"name": "checkout_cart", "arguments": {}},
+        }
+        text = (
+            f"Done bhai 👍\nOrder ready hai.\n\nTotal: ₹{total_rupees:,.2f}".replace(".00", "")
+            + "\n\n"
+            f"Payment yahan kar sakte ho:\n{payment_url}\n\n"
+            f"Payment confirm hote hi order confirm karke invoice yahin bhej dunga."
+        )
+        _persist_on_inbound(db, business_id, phone_number_id, wa_id, inbound_message_id, state)
+        db.commit()
+        return _messages(wa_id, text, state, db, business_id)
+
+    return None
+
+
 def process_customer_commerce_message(
     db: Session,
     business_id: UUID,
@@ -379,13 +570,19 @@ def process_customer_commerce_message(
     buyer = resolve_or_create_whatsapp_buyer(db, business_id, wa_id)
     previous = load_commerce_state(db, business_id, phone_number_id, wa_id)
     shown_ids = [value for value in previous["shown_product_ids"] if isinstance(value, str)]
-    normalized = normalize_catalog_text(text_body)
 
-    if re.search(r"\b(payment|paid)\b", normalized):
+    if _is_payment_claim(text_body):
         state = {**previous, "route": "chat", "last_intent": "payment_claim", "tool_call": None}
         text = "Samajh gaya. Payment confirm hote hi status automatically update ho jayega."
         _persist_on_inbound(db, business_id, phone_number_id, wa_id, inbound_message_id, state)
         return _messages(wa_id, text, state, db, business_id)
+
+    if _is_checkout_intent(text_body):
+        checkout_msgs = _handle_checkout_intent(
+            db, business_id, buyer.id, phone_number_id, wa_id, previous, inbound_message_id
+        )
+        if checkout_msgs:
+            return checkout_msgs
 
     selected = _ordinal_product(db, business_id, text_body, shown_ids)
     if selected is None:

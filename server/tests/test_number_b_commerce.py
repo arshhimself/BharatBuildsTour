@@ -151,7 +151,7 @@ def test_cart_and_checkout_session_lifecycle(test_setup):
         session_info = prepare_checkout_session(db, biz_id, order_id)
         raw_token = session_info["raw_token"]
         assert raw_token
-        assert session_info["payment_url"] == f"/pay/{raw_token}"
+        assert session_info["payment_url"].endswith(f"/pay/{raw_token}")
 
     # Verify GET /pay/{token} page
     resp = client.get(f"/pay/{raw_token}")

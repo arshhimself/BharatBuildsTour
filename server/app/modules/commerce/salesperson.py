@@ -224,7 +224,12 @@ def customer_salesperson_chat(
                 updates["checkout_session_id"] = payload.get(
                     "checkout_session_id", updates.get("checkout_session_id")
                 )
-                updates["checkout_stage"] = "checkout_prepared"
+                updates["checkout_stage"] = "awaiting_payment"
+                payment_url = payload.get("payment_url")
+                if payment_url:
+                    updates["payment_url"] = payment_url
+                    if payment_url not in final:
+                        final = f"{final}\n\nPayment yahan kar sakte ho:\n{payment_url}"
 
         logger.info(
             "customer salesperson completed",
