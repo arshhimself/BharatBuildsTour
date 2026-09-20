@@ -35,7 +35,7 @@ export function CTAFooter() {
                 <div className="w-6 h-6 rounded-full bg-[#128c7e] text-white flex items-center justify-center">
                   <MessageSquare className="w-3 h-3" />
                 </div>
-                <span className="text-[12px] font-semibold text-[#182235]">StockAware Demo</span>
+                <span className="text-[12px] font-semibold text-[#182235]">BizMate Demo</span>
               </div>
               <div className="bg-[#d9fdd3] p-2 rounded-lg text-[12px] text-gray-800 ml-8 mb-2 relative">
                 Hi! Ready to automate your sales?
@@ -56,14 +56,8 @@ export function CTAFooter() {
             {/* Brand Column */}
             <div className="lg:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-7 h-7 rounded-lg bg-[#5b5bf7] flex items-center justify-center text-white font-bold shadow-sm">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <span className="font-bold text-[18px] tracking-tight text-[#182235]">StockAware</span>
+                <img src="/bizmate-logo-icon.png" alt="BizMate Logo" className="w-7 h-7 rounded-lg object-contain" />
+                <span className="font-bold text-[18px] tracking-tight text-[#182235]">BizMate</span>
               </div>
               <p className="text-[14px] text-[#667085] leading-relaxed">
                 WhatsApp-first AI operations for wholesale businesses.
@@ -108,15 +102,15 @@ export function CTAFooter() {
           </div>
 
           <div className="border-t border-gray-100 pt-8 mb-8">
-            <h4 className="font-bold text-[#182235] text-[14px] mb-2">About StockAware</h4>
+            <h4 className="font-bold text-[#182235] text-[14px] mb-2">About BizMate</h4>
             <p className="text-[13px] text-[#667085] max-w-[800px] leading-relaxed">
-              StockAware helps wholesale businesses turn everyday WhatsApp conversations into a connected workflow — from customer inquiry and stock checks to quotes, payments, invoices and follow-ups.
+              BizMate helps wholesale businesses turn everyday WhatsApp conversations into a connected workflow — from customer inquiry and stock checks to quotes, payments, invoices and follow-ups.
             </p>
           </div>
 
           <div className="border-t border-gray-100 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="text-[13px] text-[#667085]">
-              &copy; {new Date().getFullYear()} StockAware
+              &copy; {new Date().getFullYear()} BizMate
             </div>
             <div className="text-[13px] text-[#667085] font-medium">
               Built for businesses that run on WhatsApp.

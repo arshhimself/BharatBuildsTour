@@ -149,7 +149,7 @@ export function EarlyAccessSection() {
 
                     <button
                       type="submit"
-                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600 py-3 text-xs font-bold text-white shadow-md hover:bg-indigo-700 transition-all transform hover:scale-[1.01] cursor-pointer"
+                      className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-[#128C7E] transition-all transform hover:scale-[1.01] cursor-pointer"
                     >
                       <span>Reserve my early-access slot</span>
                       <ArrowRight className="h-4 w-4" />

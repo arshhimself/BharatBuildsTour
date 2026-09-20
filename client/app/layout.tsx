@@ -3,25 +3,31 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'StockAware · Intelligent Commerce Infrastructure',
-  description: 'Turn WhatsApp inquiries into quotes, payments, invoices, and action.',
-  generator: 'v0.app',
-  icons: {
-    icon: [
+  title: 'BizMate — Run your business. Not the busywork.',
+  description: 'Your AI team for sales, operations, finance and growth — working quietly behind the conversations you already have.',
+  metadataBase: new URL('https://bizmate.app'),
+  openGraph: {
+    title: 'BizMate — Run your business. Not the busywork.',
+    description: 'Your AI team for sales, operations, finance and growth — working quietly behind the conversations you already have.',
+    images: [
       {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: '/bizmate-og-cover.png',
+        width: 1672,
+        height: 941,
+        alt: 'BizMate — Your AI Business Partner',
       },
     ],
-    apple: '/apple-icon.png',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'BizMate — Run your business. Not the busywork.',
+    description: 'Your AI team for sales, operations, finance and growth — working quietly behind the conversations you already have.',
+    images: ['/bizmate-og-cover.png'],
+  },
+  icons: {
+    icon: '/bizmate-logo-icon.png',
+    apple: '/bizmate-logo-icon.png',
   },
 }
 

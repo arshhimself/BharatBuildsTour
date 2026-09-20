@@ -116,10 +116,10 @@ export function Hero() {
 
               <Link
                 href="/early-access"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-white border border-slate-300 px-6 py-3.5 text-sm font-bold text-slate-800 shadow-xs hover:bg-slate-50 transition-colors"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3.5 text-sm font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-[#128C7E] transition-all duration-200 hover:scale-[1.02]"
               >
                 <span>Reserve early access</span>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-extrabold text-indigo-600">
+                <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-extrabold text-white">
                   ₹2,000
                 </span>
               </Link>

@@ -136,7 +136,7 @@ export function Landing3D() {
                 <SpinningLogo />
               </Canvas>
             </div>
-            <span className="text-2xl font-bold">StockAware</span>
+            <span className="text-2xl font-bold">BizMate</span>
           </div>
           <ul className="flex space-x-6">
             <li><Link href="/" className="hover:text-gray-300">Home</Link></li>
@@ -148,7 +148,7 @@ export function Landing3D() {
       </header>
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center z-10">
         <h1 className="text-6xl font-bold mb-8 max-w-4xl mx-auto">Turn messy WhatsApp RFQs into policy-safe quotes</h1>
-        <h2 className="text-xl mb-10">StockAware&rsquo;s Manager coordinates inventory, pricing, approvals, payments, and invoices &mdash; so your team can quote faster without losing control.</h2>
+        <h2 className="text-xl mb-10">BizMate&rsquo;s Manager coordinates inventory, pricing, approvals, payments, and invoices &mdash; so your team can quote faster without losing control.</h2>
         <Link href="/dashboard" className="bg-white text-black font-bold py-3 px-6 rounded-md hover:bg-gray-200 transition duration-300">
           Continue to the app
         </Link>

@@ -33,7 +33,7 @@ export function RealBusinessSection() {
             </ul>
 
             <div className="inline-block px-5 py-3 bg-[#F8FAFF] border border-[#E9E2FF] rounded-xl text-[#5b5bf7] font-bold text-[16px]">
-              StockAware keeps the workflow moving.
+              BizMate keeps the workflow moving.
             </div>
           </div>
 

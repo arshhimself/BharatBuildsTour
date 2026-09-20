@@ -35,11 +35,9 @@ export function Logo({ dark = false }: { dark?: boolean }) {
         dark ? 'text-white' : 'text-[#111B21]'
       }`}
     >
-      <span className="grid size-8 place-items-center rounded-[10px] bg-[#25D366] text-white shadow-lg shadow-green-500/20">
-        <Zap />
-      </span>
+      <img src="/bizmate-logo-icon.png" alt="BizMate Logo" className="h-7 w-7 rounded-lg object-contain" />
       <span>
-        Stock<span className="text-[#128C7E]">Aware</span>
+        Biz<span className="text-[#128C7E]">Mate</span>
       </span>
     </Link>
   )

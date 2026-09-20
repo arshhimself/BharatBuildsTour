@@ -2,7 +2,7 @@ import React from 'react';
 
 const workflowSteps = [
   { id: '01', title: 'Customer messages you' },
-  { id: '02', title: 'StockAware understands the request' },
+  { id: '02', title: 'BizMate understands the request' },
   { id: '03', title: 'Stock + pricing checked' },
   { id: '04', title: 'Quote prepared' },
   { id: '05', title: 'Manager approval when required' },

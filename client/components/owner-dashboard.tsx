@@ -154,7 +154,7 @@ export function OwnerDashboard() {
 
   return <div className="owner-shell">
     <aside className="owner-sidebar">
-      <div className="owner-brand"><span className="owner-brand-mark"><Zap size={18} /></span>StockAware</div>
+      <div className="owner-brand"><img src="/bizmate-logo-icon.png" alt="BizMate Logo" className="h-7 w-7 rounded-lg object-contain" />BizMate</div>
       <div className="owner-workspace"><span className="owner-workspace-icon">R</span><span><small>WORKSPACE</small><strong>Rehbar's business</strong></span></div>
       <nav aria-label="Dashboard tabs" className="owner-nav">
         {tabs.map(({ id, label, icon: Icon }) => <button key={id} type="button"
@@ -170,7 +170,7 @@ export function OwnerDashboard() {
         <div><span className="owner-user">{name}</span><button type="button" onClick={logout} title="Sign out"><LogOut size={16} /> Sign out</button></div>
       </header>
       <main className="owner-main">
-        <div className="owner-heading"><div><p className="owner-kicker">STOCKAWARE / {tab.toUpperCase()}</p>
+        <div className="owner-heading"><div><p className="owner-kicker">BIZMATE / {tab.toUpperCase()}</p>
           <h1>{tab === 'overview' ? `Good to see you, ${name.split(' ')[0]}.` : tabs.find(item => item.id === tab)?.label}</h1>
           <p>{tab === 'overview' ? 'A live picture of sales, customers and commitments.' : 'Your business data, ready for action.'}</p>
         </div><button className="owner-refresh" type="button" onClick={() => act(async () => {})} disabled={busy}><RefreshCw size={15} /> Refresh</button></div>

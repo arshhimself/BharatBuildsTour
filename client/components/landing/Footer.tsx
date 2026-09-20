@@ -19,9 +19,7 @@ export function Footer() {
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">
-                <Sparkles className="h-3.5 w-3.5" />
-              </div>
+              <img src="/bizmate-logo-icon.png" alt="BizMate Logo" className="h-7 w-7 rounded-lg object-contain" />
               <span className="text-lg font-extrabold tracking-tight text-slate-900">
                 BizMate
               </span>

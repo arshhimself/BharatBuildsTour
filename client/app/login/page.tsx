@@ -22,7 +22,7 @@ export default function LoginPage() {
       router.replace('/dashboard')
     } catch (cause) {
       setError(cause instanceof ApiError && cause.status === 401
-        ? 'This phone number is not registered for a StockAware workspace.'
+        ? 'This phone number is not registered for a BizMate workspace.'
         : cause instanceof Error ? cause.message : 'Could not sign in. Try again.')
     } finally {
       setLoading(false)
@@ -31,7 +31,7 @@ export default function LoginPage() {
 
   return <main className="owner-login">
     <section className="owner-login-story">
-      <div className="owner-brand"><span className="owner-brand-mark"><Zap size={18} /></span>StockAware</div>
+      <div className="owner-brand"><img src="/bizmate-logo-icon.png" alt="BizMate Logo" className="h-7 w-7 rounded-lg object-contain mr-2" />BizMate</div>
       <div>
         <p className="owner-kicker">OWNER CONTROL ROOM</p>
         <h1>Know what is moving. Decide what happens next.</h1>

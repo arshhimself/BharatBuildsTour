@@ -20,7 +20,7 @@ export function LanguageSection() {
             </p>
             
             <p className="text-[#667085] text-[16px] leading-relaxed mb-8 max-w-[400px]">
-              Speak naturally. StockAware understands unstructured voice notes, text messages, and regional languages. No app downloads required.
+              Speak naturally. BizMate understands unstructured voice notes, text messages, and regional languages. No app downloads required.
             </p>
 
             <div className="flex flex-wrap gap-2.5">

@@ -26,7 +26,7 @@ export function FinalCTASection() {
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/early-access"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-7 py-3.5 text-sm font-bold text-white shadow-md hover:bg-indigo-600 transition-all transform hover:scale-[1.02]"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-[#25D366] px-7 py-3.5 text-sm font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-[#128C7E] transition-all transform hover:scale-[1.02]"
             >
               <span>Reserve early access</span>
               <ArrowRight className="h-4 w-4" />

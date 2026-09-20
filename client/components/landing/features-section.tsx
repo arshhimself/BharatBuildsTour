@@ -5,7 +5,7 @@ const features = [
   {
     icon: <MessageSquare className="w-5 h-5 text-[#5b5bf7]" />,
     title: "WhatsApp Orders → Instant Quotes",
-    description: "Customers send their requirements on WhatsApp. StockAware understands the request, checks stock & pricing, and prepares the quote."
+    description: "Customers send their requirements on WhatsApp. BizMate understands the request, checks stock & pricing, and prepares the quote."
   },
   {
     icon: <Globe className="w-5 h-5 text-[#059669]" />,
@@ -36,7 +36,7 @@ export function FeaturesSection() {
         <div className="text-center max-w-[700px] mx-auto mb-16">
           <h2 className="text-[32px] md:text-[40px] font-bold text-[#182235] tracking-tight mb-4 leading-tight">
             Your business runs on WhatsApp.<br/>
-            StockAware makes it work harder.
+            BizMate makes it work harder.
           </h2>
         </div>
 

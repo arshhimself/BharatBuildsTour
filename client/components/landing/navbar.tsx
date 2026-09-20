@@ -24,7 +24,8 @@ export function Navbar() {
         setScrolled(false);
       }
     }
-    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -39,9 +40,7 @@ export function Navbar() {
       >
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">
-            <Sparkles className="h-3.5 w-3.5" />
-          </div>
+          <img src="/bizmate-logo-icon.png" alt="BizMate Logo" className="h-7 w-7 rounded-lg object-contain" />
           <span className="text-lg font-extrabold tracking-tight text-slate-900">
             BizMate
           </span>
@@ -70,7 +69,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/early-access"
-            className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-600 transition-all duration-200 hover:scale-[1.02]"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-[#128C7E] transition-all duration-200 hover:scale-[1.02]"
           >
             <span>Reserve early access</span>
             <ArrowRight className="h-3.5 w-3.5" />
@@ -111,7 +110,7 @@ export function Navbar() {
             <Link
               href="/early-access"
               onClick={() => setMobileMenuOpen(false)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-500/20 hover:bg-[#128C7E]"
             >
               <span>Reserve early access</span>
               <ArrowRight className="h-3.5 w-3.5" />
