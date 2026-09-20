@@ -90,6 +90,7 @@ class OutboundMessage:
     address: str | None = None
     contacts: list[dict] = field(default_factory=list)
     interactive: dict | None = None
+    demo_state: dict | None = None
 
 
 def _transition(
@@ -862,6 +863,12 @@ def process_admin_message(
             "Reminder created",
             metadata={"reminder": reminder or None},
         )
+
+    from app.modules.runs.demo_ganesh import handle_owner_demo_flow
+
+    demo_outbound = handle_owner_demo_flow(db, admin_wa_id, stripped)
+    if demo_outbound is not None:
+        return demo_outbound
 
     if decision.intent is IntentType.APPROVE_QUOTE:
         return [

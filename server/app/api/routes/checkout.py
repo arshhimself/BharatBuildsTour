@@ -445,3 +445,16 @@ def get_public_invoice_artifact(invoice_id: UUID, db: Session = Depends(get_db))
         )
 
     raise HTTPException(status_code=404, detail="Invoice artifact not found")
+
+
+@router.get("/api/demo/ganesh-chaturthi-image")
+def get_ganesh_chaturthi_demo_image():
+    """Public unauthenticated endpoint to serve the Ganesh Chaturthi demo image for WhatsApp."""
+    from pathlib import Path
+
+    from fastapi.responses import FileResponse
+
+    image_path = Path(__file__).parent.parent.parent / "static" / "ganesh_chaturthi_demo.jpg"
+    if image_path.exists():
+        return FileResponse(image_path, media_type="image/jpeg")
+    raise HTTPException(status_code=404, detail="Ganesh Chaturthi demo image not found")

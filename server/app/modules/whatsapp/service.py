@@ -426,6 +426,11 @@ async def handle_webhook_payload(db: Session, payload: dict) -> None:
                         if isinstance(getattr(out_message, "commerce_context", None), dict)
                         else {}
                     ),
+                    **(
+                        out_message.demo_state
+                        if isinstance(getattr(out_message, "demo_state", None), dict)
+                        else {}
+                    ),
                 },
             )
         db.commit()
