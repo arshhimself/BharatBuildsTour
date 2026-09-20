@@ -11,9 +11,6 @@ importers:
       '@base-ui/react':
         specifier: ^1.5.0
         version: 1.5.0(@date-fns/tz@1.4.1)(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@next/swc-darwin-arm64':
-        specifier: ^16.3.3
-        version: 16.3.3
       '@react-three/drei':
         specifier: ^10.7.8
         version: 10.7.8(@react-three/fiber@9.7.0(@types/react@19.2.14)(immer@11.1.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.186.0))(@types/react@19.2.14)(@types/three@0.186.0)(immer@11.1.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.186.0)
@@ -2716,7 +2713,8 @@ snapshots:
 
   '@next/env@16.3.3': {}
 
-  '@next/swc-darwin-arm64@16.3.3': {}
+  '@next/swc-darwin-arm64@16.3.3':
+    optional: true
 
   '@next/swc-darwin-x64@16.3.3':
     optional: true
