@@ -341,9 +341,13 @@ def process_test_payment(token: str, db: Session = Depends(get_db)):
             ],
             "total_paise": total_paise,
         }
+        from app.modules.invoices.storage import LocalArtifactStore
+
         pdf_bytes = render_invoice_pdf(snapshot)
         artifact_sha = hashlib.sha256(pdf_bytes).hexdigest()
-        artifact_key = f"invoices/{session_rec.business_id}/{invoice_number}.pdf"
+        artifact_key = f"{session_rec.business_id}/{session_rec.order_id}.pdf"
+        store = LocalArtifactStore()
+        store.write(artifact_key, pdf_bytes)
 
         invoice = Invoice(
             business_id=session_rec.business_id,
@@ -371,15 +375,29 @@ def process_test_payment(token: str, db: Session = Depends(get_db)):
     # 8. POST-COMMIT WHATSAPP MESSAGING (network errors will NOT roll back committed DB state)
     if buyer and buyer.whatsapp_e164:
         try:
-            text_msg = f"Payment received ✅\nOrder #{str(order.id)[:8]} placed successfully."
-            send_whatsapp_message(buyer.whatsapp_e164, text_msg)
+            from app.core.config import get_settings
+
+            settings = get_settings()
+            base_url = get_public_base_url()
+            pdf_url = f"{base_url}/api/invoices/public/{invoice.id}/artifact"
+            sending_phone_id = (
+                settings.whatsapp_test_phone_number_id or settings.whatsapp_biz_phone_number_id
+            )
+
+            text_msg = (
+                f"Payment received ✅\n"
+                f"Order #{str(order.id)[:8]} confirmed!\n"
+                f"Invoice #{invoice.invoice_number} generate ho gaya hai. Below invoice pdf check kar lo 👇"
+            )
+            send_whatsapp_message(buyer.whatsapp_e164, text_msg, phone_number_id=sending_phone_id)
 
             send_whatsapp_media(
                 to=buyer.whatsapp_e164,
-                media_url=f"/invoices/{invoice.id}/artifact",
+                media_url=pdf_url,
                 caption=f"Invoice #{invoice.invoice_number}",
                 message_type="document",
                 filename=f"Invoice-{invoice.invoice_number}.pdf",
+                phone_number_id=sending_phone_id,
             )
         except Exception as exc:
             logger.warning(f"Failed to send post-commit WhatsApp notification: {exc}")
@@ -389,3 +407,41 @@ def process_test_payment(token: str, db: Session = Depends(get_db)):
         "order_id": str(session_rec.order_id),
         "invoice_number": invoice.invoice_number,
     }
+
+
+@router.get("/api/invoices/public/{invoice_id}/artifact")
+def get_public_invoice_artifact(invoice_id: UUID, db: Session = Depends(get_db)):
+    """Public unauthenticated endpoint to download invoice PDF (for WhatsApp delivery)."""
+    from fastapi.responses import FileResponse
+
+    from app.modules.invoices.storage import LocalArtifactStore
+
+    invoice = db.scalar(select(Invoice).where(Invoice.id == invoice_id))
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    store = LocalArtifactStore()
+    if invoice.artifact_key:
+        try:
+            file_path = store.path(invoice.artifact_key)
+            if file_path.exists():
+                return FileResponse(
+                    file_path,
+                    media_type="application/pdf",
+                    filename=f"Invoice-{invoice.invoice_number}.pdf",
+                )
+        except ValueError:
+            pass
+
+    if invoice.snapshot:
+        pdf_bytes = render_invoice_pdf(invoice.snapshot)
+        key = f"{invoice.business_id}/{invoice.order_id}.pdf"
+        store.write(key, pdf_bytes)
+        file_path = store.path(key)
+        return FileResponse(
+            file_path,
+            media_type="application/pdf",
+            filename=f"Invoice-{invoice.invoice_number}.pdf",
+        )
+
+    raise HTTPException(status_code=404, detail="Invoice artifact not found")

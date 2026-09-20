@@ -277,6 +277,9 @@ def test_authoritative_test_payment_execution(checkout_handoff_setup):
 
         mock_txt.assert_called_once()
         mock_doc.assert_called_once()
+        doc_args = mock_doc.call_args[1]
+        assert "/api/invoices/public/" in doc_args["media_url"]
+        assert doc_args["message_type"] == "document"
 
     # DB Assertions
     with transaction_session() as db:
@@ -295,3 +298,10 @@ def test_authoritative_test_payment_execution(checkout_handoff_setup):
 
         invoice = db.query(Invoice).filter(Invoice.order_id == order_id).one()
         assert invoice.status == "GENERATED"
+        invoice_id = invoice.id
+
+    # Test Public PDF Download endpoint
+    art_resp = client.get(f"/api/invoices/public/{invoice_id}/artifact")
+    assert art_resp.status_code == 200
+    assert art_resp.headers["content-type"] == "application/pdf"
+    assert len(art_resp.content) > 100
