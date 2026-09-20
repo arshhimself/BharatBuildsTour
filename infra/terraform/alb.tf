@@ -74,6 +74,30 @@ resource "aws_lb_target_group" "client" {
   }
 }
 
+# Requests for server API, pay, webhook, and artifacts routes under the client domain
+# hit the server target group with higher priority (5).
+resource "aws_lb_listener_rule" "server_api" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 5
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+
+  condition {
+    host_header {
+      values = [var.client_domain]
+    }
+  }
+
+  condition {
+    path_pattern {
+      values = ["/pay/*", "/api/*", "/webhook/*", "/artifacts/*"]
+    }
+  }
+}
+
 # Requests for the client hostname go to the client target group; everything
 # else keeps hitting the server target group via the listener's default action.
 resource "aws_lb_listener_rule" "client" {

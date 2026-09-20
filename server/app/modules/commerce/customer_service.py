@@ -13,7 +13,7 @@ from app.modules.catalog.models import ProductAlias
 from app.modules.catalog.normalization import normalize_catalog_text
 from app.modules.commerce.discovery import DiscoveryKind, interpret_discovery_message
 from app.modules.commerce.sales_tools import product_facts
-from app.modules.commerce.salesperson import customer_salesperson_chat
+from app.modules.commerce.salesperson import clean_whatsapp_text, customer_salesperson_chat
 from app.modules.identity.service import resolve_or_create_whatsapp_buyer
 from app.modules.runs.service import OutboundMessage
 from app.modules.whatsapp.models import WhatsAppMessage
@@ -158,7 +158,7 @@ def _messages(
     business_id: UUID,
     media: list[dict[str, str]] | None = None,
 ) -> list[OutboundMessage]:
-    outbound = [_attach(OutboundMessage(to=wa_id, text=text), state)]
+    outbound = [_attach(OutboundMessage(to=wa_id, text=clean_whatsapp_text(text)), state)]
     media = media or []
     facts = {
         product["id"]: product

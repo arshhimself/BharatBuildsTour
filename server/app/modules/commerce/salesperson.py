@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -35,7 +36,43 @@ SELLING BEHAVIOR
 - Mention only attributes returned by tools. Do not dump GST or SKU unless asked.
 - Images are delivered separately; never include image URLs in prose.
 - A customer's payment claim is never proof of payment. Say confirmed status updates automatically.
+
+WHATSAPP FORMATTING RULES
+- NEVER output Markdown link syntax like `[label](url)` or `[Payment Link](https://...)`. WhatsApp does NOT support markdown hyperlinks!
+- ALWAYS output raw URLs directly on a new line, e.g. `Payment yahan kar sakte ho:\nhttps://app.stockaware.vaaani.co.in/pay/...`.
+- NEVER use Markdown headers (`#`, `##`), Markdown tables, or Markdown code blocks (```).
+- Use only plain text and WhatsApp-native formatting (*bold*, _italics_) when appropriate.
 """
+
+
+def clean_whatsapp_text(text: str) -> str:
+    """Sanitize AI response text for WhatsApp.
+
+    1. Convert Markdown links `[label](url)` to plain `url` or `label: url`.
+    2. Remove Markdown headers (`#`, `##`, etc.).
+    3. Remove Markdown code block backticks.
+    """
+    if not text:
+        return text
+
+    def _replace_link(match: re.Match) -> str:
+        label = match.group(1).strip()
+        url = match.group(2).strip()
+        if label.lower() in {
+            "payment link",
+            "link",
+            "click here",
+            "here",
+            "payment",
+            "payment url",
+        }:
+            return url
+        return f"{label}: {url}"
+
+    cleaned = re.sub(r"\[([^\]]+)\]\((https?://[^\s\)]+)\)", _replace_link, text)
+    cleaned = re.sub(r"^#{1,6}\s+", "", cleaned, flags=re.MULTILINE)
+    cleaned = cleaned.replace("```", "")
+    return cleaned.strip()
 
 
 @dataclass(frozen=True)
@@ -240,7 +277,7 @@ def customer_salesperson_chat(
             },
         )
         return SalespersonTurn(
-            text=final.strip(),
+            text=clean_whatsapp_text(final),
             tool_call=tool_call,
             state_updates=updates,
             outbound_media=outbound_media,

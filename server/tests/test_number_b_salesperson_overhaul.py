@@ -238,3 +238,20 @@ def test_fake_payment_claim_never_promotes_buyer(pg_session: Session) -> None:
         )
     )
     assert buyer is not None and buyer.is_customer is False
+
+
+def test_clean_whatsapp_text() -> None:
+    from app.modules.commerce.salesperson import clean_whatsapp_text
+
+    raw = "Payment ke liye yahan click karein: [Payment Link](https://app.stockaware.vaaani.co.in/pay/xyz123)."
+    cleaned = clean_whatsapp_text(raw)
+    assert (
+        cleaned
+        == "Payment ke liye yahan click karein: https://app.stockaware.vaaani.co.in/pay/xyz123."
+    )
+    assert "[Payment Link]" not in cleaned
+
+    header_raw = "## Order Summary\n*Total: ₹1,299*"
+    cleaned_header = clean_whatsapp_text(header_raw)
+    assert "##" not in cleaned_header
+    assert "Order Summary" in cleaned_header
