@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { ArrowUpRight, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, ShieldCheck, Sparkles, MessageSquare, FileText, ArrowRight, ShoppingBag, MapPin } from 'lucide-react';
 
 interface BusinessStory {
   id: string;
   name: string;
   category: string;
-  website: string;
+  website?: string;
   logo: string;
   tag: string;
   description: string;
@@ -47,6 +47,23 @@ const REAL_BUSINESSES: BusinessStory[] = [
   },
 ];
 
+const SA_COLLECTION_STEPS = [
+  { label: 'WhatsApp Inquiry' },
+  { label: 'Sales Agent' },
+  { label: 'Stock / Availability' },
+  { label: 'Instant Quote' },
+  { label: 'Payment Collected' },
+];
+
+const KRAFT_STEPS = [
+  { label: 'IndiaMART Enquiry' },
+  { label: 'WhatsApp Conversation' },
+  { label: 'Sales Agent Requirement' },
+  { label: 'Product Specs Check' },
+  { label: 'Instant Quote' },
+  { label: 'Follow-up' },
+];
+
 export function WomensFashionStorySection() {
   return (
     <section id="stories" className="relative py-24 bg-[#F8FAFF] border-t border-slate-200/60 overflow-hidden">
@@ -55,7 +72,7 @@ export function WomensFashionStorySection() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-indigo-50/50 rounded-full blur-3xl pointer-events-none -z-10" />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-        
+
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[11px] font-extrabold uppercase tracking-wider">
@@ -74,7 +91,7 @@ export function WomensFashionStorySection() {
           </p>
         </div>
 
-        {/* Business Cards Composition (2-Column Desktop, 1-Column Mobile) */}
+        {/* Business Grid 1: Zeliora & Crodlin Tech */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {REAL_BUSINESSES.map((business) => (
             <div
@@ -98,11 +115,9 @@ export function WomensFashionStorySection() {
 
                 {/* Business Info */}
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-                      {business.name}
-                    </h3>
-                  </div>
+                  <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {business.name}
+                  </h3>
                   <span className="text-xs font-semibold text-indigo-600 block mt-0.5">
                     {business.category}
                   </span>
@@ -136,32 +151,250 @@ export function WomensFashionStorySection() {
                   Verified Business
                 </span>
 
-                <a
-                  href={business.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors duration-200"
-                >
-                  <span>Visit website ↗</span>
-                </a>
+                {business.website && (
+                  <a
+                    href={business.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs transition-colors duration-200"
+                  >
+                    <span>Visit website ↗</span>
+                  </a>
+                )}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Supporting Secondary Proof Element */}
-        <div className="mt-12 max-w-2xl mx-auto text-center">
-          <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
-            <div className="h-7 w-7 rounded-lg overflow-hidden bg-slate-900 p-1 flex items-center justify-center border border-slate-700 shrink-0">
-              <img
-                src="/businesses/proof-01.jpg"
-                alt="Partner Proof Asset"
-                className="max-h-full max-w-full object-contain"
-              />
+        {/* Business Card 3: SA Collection (Featured Retail Workflow Story) */}
+        <div className="mt-8 max-w-5xl mx-auto">
+          <div className="group relative bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300">
+
+            {/* Header: Logo, Name, Location & Tag */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-100">
+              <div className="flex items-center gap-4">
+                <div className="relative h-14 w-28 rounded-xl overflow-hidden bg-slate-950 p-2 flex items-center justify-center border border-slate-800 shadow-inner">
+                  <img
+                    src="/businesses/sa-collection-logo.jpg"
+                    alt="SA Collection logo"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    SA Collection
+                  </h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs font-semibold text-indigo-600">
+                      Women&apos;s Fashion Retail
+                    </span>
+                    <span className="text-slate-300">&middot;</span>
+                    <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-rose-500" />
+                      Mumbai Market
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <span className="inline-block bg-emerald-50 text-emerald-700 text-[10px] font-bold tracking-wider uppercase px-3 py-1.5 rounded-full border border-emerald-200/80">
+                Current Workflow &rarr; Automation Opportunity
+              </span>
             </div>
-            <p className="text-xs text-slate-600 font-medium">
-              Co-designing automated operations with forward-thinking teams.
-            </p>
+
+            {/* Business Context & Metrics */}
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+              <div className="md:col-span-7 space-y-3">
+                <p className="text-sm sm:text-base text-slate-700 font-normal leading-relaxed">
+                  A busy ladies&apos; clothing shop in the Mumbai retail hub handling daily customer enquiries on WhatsApp. BizMate streamlines their high-frequency order lifecycle.
+                </p>
+                <div className="flex flex-wrap items-center gap-4 pt-1">
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Daily Orders</span>
+                    <span className="text-sm font-black text-slate-900">20–30 orders / day</span>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Avg Order Value</span>
+                    <span className="text-sm font-black text-slate-900">₹800 – ₹1,500</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sample WhatsApp Sales Automation Visual */}
+              <div className="md:col-span-5 bg-[#efeae2] p-3.5 rounded-2xl border border-slate-200/80 space-y-2 text-[11px] relative overflow-hidden"
+                style={{
+                  backgroundImage: `url('/whatsappChatWallPaper.jpg')`,
+                  backgroundSize: '280px auto',
+                  backgroundRepeat: 'repeat',
+                }}
+              >
+                <div className="absolute inset-0 bg-white/40 pointer-events-none" />
+
+                {/* Customer inquiry */}
+                <div className="relative flex justify-end">
+                  <div className="max-w-[85%] rounded-xl bg-[#d9fdd3] p-2 text-slate-800 shadow-xs">
+                    <p className="leading-snug">Black kurti chahiye, mix size available hai?</p>
+                  </div>
+                </div>
+
+                {/* Sales Agent response */}
+                <div className="relative flex justify-start">
+                  <div className="max-w-[88%] rounded-xl bg-white p-2 text-slate-800 shadow-xs">
+                    <p className="leading-snug font-medium text-slate-900">Yes, 7 pieces ready to ship! Quote ₹1,299.</p>
+                  </div>
+                </div>
+
+                {/* Payment button */}
+                <div className="relative bg-white rounded-lg p-2 border border-slate-200 shadow-2xs">
+                  <button className="w-full rounded-md bg-[#25d366] py-1 text-center font-bold text-white text-[10px]">
+                    Pay Securely — ₹1,299
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Illustrative Process Flow Steps */}
+            <div className="mt-6 pt-6 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400">
+                  Target Automation Flow
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Illustrative BizMate workflow
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                {SA_COLLECTION_STEPS.map((step, idx) => (
+                  <div key={step.label} className="bg-slate-50 rounded-xl border border-slate-200/70 p-2.5 text-center">
+                    <span className="text-[9px] font-bold text-indigo-600 block">0{idx + 1}</span>
+                    <span className="text-xs font-bold text-slate-800">{step.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Business Card 4: Kraft Industrial Rubber Product Workflow Story Card */}
+        <div className="mt-8 max-w-5xl mx-auto">
+          <div className="group relative bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-sm hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300">
+
+            {/* Header: Logo, Name, Category & Tag */}
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-100">
+              <div className="flex items-center gap-4">
+                <div className="relative h-14 w-28 rounded-xl overflow-hidden bg-white p-2 flex items-center justify-center border border-slate-200 shadow-xs">
+                  <img
+                    src="/businesses/proof-01.jpg"
+                    alt="Kraft logo"
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Kraft
+                  </h3>
+                  <span className="text-xs font-semibold text-indigo-600 block">
+                    Industrial Rubber Products
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="inline-block bg-amber-50 text-amber-700 text-[10px] font-bold tracking-wider uppercase px-3 py-1.5 rounded-full border border-amber-200/80">
+                  Illustrative BizMate workflow
+                </span>
+              </div>
+            </div>
+
+            {/* Context & Quote */}
+            <div className="mt-6 space-y-3">
+              <p className="text-base sm:text-lg font-medium text-slate-800 leading-relaxed italic border-l-4 border-indigo-500 pl-4 py-1">
+                &ldquo;IndiaMART enquiries become WhatsApp conversations — where BizMate can help move product questions, specifications, quotes and follow-ups forward.&rdquo;
+              </p>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Kraft manufactures industrial rubber shapes and components for Indian B2B businesses and MSMEs. BizMate maps into their high-volume lead handling lifecycle.
+              </p>
+            </div>
+
+            {/* Illustrative Workflow Visual Diagram */}
+            <div className="mt-8 pt-6 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                  Product Sales Workflow Map
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Illustrative BizMate workflow
+                </span>
+              </div>
+
+              {/* Step Process Flow Badges */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {KRAFT_STEPS.map((step, idx) => (
+                  <div
+                    key={step.label}
+                    className="relative bg-slate-50 rounded-2xl border border-slate-200/70 p-3 flex flex-col justify-between text-center min-h-[85px]"
+                  >
+                    <span className="text-[10px] font-black text-indigo-600 font-mono block mb-1">
+                      0{idx + 1}
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 leading-snug">
+                      {step.label}
+                    </span>
+                    {idx < KRAFT_STEPS.length - 1 && (
+                      <ArrowRight className="hidden lg:block absolute -right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 z-10" />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Visual Component Cards (IndiaMART Badge, WhatsApp Chat Bubble, Spec & Quote Preview) */}
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+                {/* 1. IndiaMART Source Badge & Lead Card */}
+                <div className="rounded-2xl border border-teal-200/80 bg-teal-50/40 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wide bg-teal-600 text-white px-2 py-0.5 rounded-md">
+                      IndiaMART Lead
+                    </span>
+                    <span className="text-[10px] font-medium text-teal-700">MSME Buyer</span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900">Rubber Grommets &amp; Bushings Enquiry</h4>
+                  <p className="text-[11px] text-slate-600">Requirement: 5,000 units oil-resistant EPDM rubber shapes.</p>
+                </div>
+
+                {/* 2. WhatsApp Sales Agent Conversation */}
+                <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-4 space-y-2">
+                  <div className="flex items-center gap-1.5 text-emerald-700 font-bold text-[11px]">
+                    <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>WhatsApp Sales Agent</span>
+                  </div>
+                  <div className="bg-white rounded-xl p-2.5 border border-emerald-100 shadow-2xs text-[11px] text-slate-700 space-y-1">
+                    <p className="font-semibold text-slate-900">Agent Response:</p>
+                    <p>&ldquo;Checking EPDM shore hardness &amp; CAD specs for your application...&rdquo;</p>
+                  </div>
+                </div>
+
+                {/* 3. Instant Quote & Spec Summary */}
+                <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/40 p-4 space-y-2">
+                  <div className="flex items-center gap-1.5 text-indigo-700 font-bold text-[11px]">
+                    <FileText className="h-3.5 w-3.5 text-indigo-600" />
+                    <span>Quote &amp; Spec Sheet</span>
+                  </div>
+                  <div className="bg-white rounded-xl p-2.5 border border-indigo-100 shadow-2xs text-[11px] text-slate-700 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-slate-900 block">Draft Quote #KR-842</span>
+                      <span className="text-[10px] text-slate-500">5,000 Custom Molded Seals</span>
+                    </div>
+                    <span className="font-bold text-indigo-600 text-xs">Ready</span>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
         </div>
 

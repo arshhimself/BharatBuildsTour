@@ -2,212 +2,190 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MessageSquare, 
-  Sparkles, 
-  Package, 
-  FileText, 
-  CreditCard, 
-  CheckCircle2, 
-  ShieldCheck, 
-  Check,
-  ArrowRight
+import {
+  Sparkles,
+  MessageSquare,
+  PackageCheck,
+  CreditCard,
+  Bot,
+  CheckCheck,
+  ShieldCheck,
+  FileText,
+  ChevronLeft,
+  Phone,
+  Video,
+  MoreVertical,
+  Check
 } from 'lucide-react';
 import { Iphone3D } from './Iphone3D';
 
-const WORKFLOW_STEPS = [
+interface Moment {
+  id: string;
+  number: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+  badgeColor: string;
+  description: string;
+  headerTitle: string;
+  headerSub: string;
+  headerIconColor: string;
+}
+
+const MOMENTS: Moment[] = [
   {
-    id: '01',
-    title: 'Customer message',
-    subtitle: 'WhatsApp Customer Message',
-    icon: MessageSquare,
+    id: 'moment-1',
+    number: '01',
+    title: 'Customer asks.',
+    subtitle: 'INSTANT WHATSAPP RESPONSE',
     badge: 'WhatsApp Native',
-    description: 'A customer asks for a product on WhatsApp: "10 black kurtis chahiye, size mix chalega?"',
-    screenType: 'inquiry',
-    chatData: {
-      user: 'Customer',
-      time: '09:24 AM',
-      text: '10 black kurtis chahiye, size mix chalega?',
-    }
+    badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    description: 'Sales Agent understands customer intent on WhatsApp and responds instantly with catalog availability.',
+    headerTitle: 'BizMate Sales Agent',
+    headerSub: 'online · WhatsApp Business',
+    headerIconColor: 'bg-emerald-500',
   },
   {
-    id: '02',
-    title: 'Sales Agent understands',
-    subtitle: 'Autonomous Catalog Match',
-    icon: Sparkles,
-    badge: 'AI Sales Agent',
-    description: 'The request becomes a clear product and quantity. Sales Agent matches inventory instantly.',
-    screenType: 'understanding',
-    chatData: {
-      agent: 'BizMate Sales Agent',
-      time: '09:24 AM',
-      text: 'Sure! I\'ll check the available stock and current pricing.',
-    }
-  },
-  {
-    id: '03',
-    title: 'Check stock',
-    subtitle: 'Inventory Allocation',
-    icon: Package,
+    id: 'moment-2',
+    number: '02',
+    title: 'BizMate checks before you promise.',
+    subtitle: 'STOCK & PRICING VERIFICATION',
     badge: 'Operation Agent',
-    description: 'Availability and pricing are confirmed: "We have 7 ready to ship right now."',
-    screenType: 'inventory',
-    stockInfo: {
-      itemName: 'Black Kurti',
-      oldStock: 12,
-      newStock: 7,
-      status: '7 Ready to Ship'
-    }
+    badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+    description: 'Stock, availability and pricing are checked autonomously before the customer gets a commitment.',
+    headerTitle: 'BizMate Operation Agent',
+    headerSub: 'stock verified · inventory sync',
+    headerIconColor: 'bg-blue-500',
   },
   {
-    id: '04',
-    title: 'Create quote',
-    subtitle: 'Automated Tax Compliance',
-    icon: FileText,
-    badge: 'GST Ready',
-    description: 'Quotation generated: 7 × Black Kurti total ₹3,850 (delivery included).',
-    screenType: 'quote',
-    invoiceData: {
-      number: 'QUOTE PREPARED',
-      item: '7 × Black Kurti',
-      delivery: 'Included',
-      total: '₹3,850'
-    }
+    id: 'moment-3',
+    number: '03',
+    title: 'Quote to payment.',
+    subtitle: 'CHECKOUT & BILLING IN CHAT',
+    badge: 'Finance Agent',
+    badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+    description: 'Quote, UPI payment link and tax invoice move forward inside WhatsApp without repeating manual work.',
+    headerTitle: 'BizMate Sales & Billing',
+    headerSub: 'instant checkout · UPI ready',
+    headerIconColor: 'bg-indigo-500',
   },
   {
-    id: '05',
-    title: 'Manager approval',
-    subtitle: 'Autonomous Policy Guard',
-    icon: ShieldCheck,
+    id: 'moment-4',
+    number: '04',
+    title: 'The rest keeps moving.',
+    subtitle: 'COORDINATED BEHIND THE SCENES',
     badge: 'Manager Agent',
-    description: 'Manager Agent verifies policy, checks profit margin, and approves order for dispatch.',
-    screenType: 'manager_approval',
-    approvalStatus: 'APPROVED — Margin 38.4%'
+    badgeColor: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    description: 'Manager Agent coordinates while Finance, Social and Operation agents complete their work automatically.',
+    headerTitle: 'BizMate Manager Agent',
+    headerSub: 'owner briefing · 4 agents active',
+    headerIconColor: 'bg-violet-600',
   },
-  {
-    id: '06',
-    title: 'Send payment link',
-    subtitle: 'Instant Checkout URL',
-    icon: CreditCard,
-    badge: 'UPI / Razorpay',
-    description: 'A secure payment link (₹3,850) is sent directly inside the WhatsApp chat.',
-    screenType: 'payment_link',
-    paymentLink: 'https://pay.bizmate.app/q/7-black-kurti'
-  },
-  {
-    id: '07',
-    title: 'Payment received',
-    subtitle: 'Automated Bank Webhook',
-    icon: CheckCircle2,
-    badge: 'Auto Reconciled',
-    description: 'Payment is confirmed automatically via UPI bank webhook. Account ledger updated.',
-    screenType: 'payment_done',
-    status: 'PAID — ₹3,850 via UPI'
-  },
-  {
-    id: '08',
-    title: 'Invoice shared',
-    subtitle: 'PDF Delivered to Customer',
-    icon: FileText,
-    badge: 'WhatsApp Receipt',
-    description: 'Official tax invoice PDF and delivery tracking link delivered directly to buyer on WhatsApp.',
-    screenType: 'invoice_shared',
-    invoiceNumber: 'INV-2026-0891.pdf'
-  }
 ];
 
 export function MessageToMoneyWorkflow() {
-  const [activeStep, setActiveStep] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [activeMoment, setActiveMoment] = useState(0);
+  const momentRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Auto-progress active step on scroll when container is in view
+  // Natural scroll tracking with IntersectionObserver (No page locking)
   useEffect(() => {
-    function handleScroll() {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
+    const observers: IntersectionObserver[] = [];
 
-      if (rect.top < windowHeight * 0.8 && rect.bottom > windowHeight * 0.2) {
-        const totalHeight = rect.height - windowHeight * 0.5;
-        const scrolled = Math.max(0, windowHeight * 0.5 - rect.top);
-        const progress = Math.min(1, scrolled / totalHeight);
-        const stepIndex = Math.min(
-          WORKFLOW_STEPS.length - 1,
-          Math.floor(progress * WORKFLOW_STEPS.length)
-        );
-        setActiveStep(stepIndex);
-      }
-    }
+    momentRefs.current.forEach((el, index) => {
+      if (!el) return;
 
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.45) {
+              setActiveMoment(index);
+            }
+          });
+        },
+        { threshold: [0.45, 0.75] }
+      );
+
+      observer.observe(el);
+      observers.push(observer);
+    });
+
+    return () => {
+      observers.forEach((obs) => obs.disconnect());
+    };
   }, []);
 
-  const currentStep = WORKFLOW_STEPS[activeStep];
+  const currentMoment = MOMENTS[activeMoment];
 
   return (
-    <section id="how-it-works" ref={containerRef} className="relative py-24 bg-[#F8FAFF] border-t border-slate-100 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section id="how-it-works" className="relative py-20 sm:py-28 bg-gradient-to-b from-[#F8FAFF] via-white to-[#F8FAFF] border-t border-slate-200/60 overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute top-1/3 left-0 w-96 h-96 bg-indigo-100/40 rounded-full blur-3xl pointer-events-none -z-10" />
+      <div className="absolute bottom-10 right-0 w-96 h-96 bg-emerald-100/30 rounded-full blur-3xl pointer-events-none -z-10" />
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 block">
-            WATCH BIZMATE THINK
-          </span>
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-[11px] font-extrabold uppercase tracking-wider shadow-xs">
+            <Sparkles className="h-3.5 w-3.5 text-indigo-600 animate-pulse" />
+            <span>THE WORK BIZMATE TAKES OFF YOUR PLATE</span>
+          </div>
 
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-            From one customer message<br /> to a completed order.
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 leading-[1.15]">
+            From the first WhatsApp message<br className="hidden sm:inline" /> to the final follow-up.
           </h2>
 
-          <p className="text-base sm:text-lg text-slate-600 font-normal">
-            One conversation. Every step coordinated behind the scenes.
+          <p className="text-base sm:text-lg text-slate-600 font-medium max-w-2xl mx-auto leading-relaxed">
+            BizMate keeps sales, stock, payments and everyday business work moving while you stay focused on running the business.
           </p>
         </div>
 
-        {/* Story Layout: Left Stepper + Right Sticky Phone */}
-        <div className="mt-16 grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        {/* Editorial Asymmetric Layout */}
+        <div className="mt-14 grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
           
-          {/* Left Side: Editorial Steps List */}
-          <div className="lg:col-span-6 space-y-3">
-            {WORKFLOW_STEPS.map((step, index) => {
-              const Icon = step.icon;
-              const isActive = activeStep === index;
+          {/* LEFT SIDE: 4 Business Moments Stepper List */}
+          <div className="lg:col-span-6 space-y-4">
+            {MOMENTS.map((moment, index) => {
+              const isActive = activeMoment === index;
 
               return (
                 <div
-                  key={step.id}
-                  onClick={() => setActiveStep(index)}
-                  className={`cursor-pointer rounded-2xl border p-5 transition-all duration-300 ${
+                  key={moment.id}
+                  ref={(el) => { momentRefs.current[index] = el; }}
+                  onClick={() => setActiveMoment(index)}
+                  className={`cursor-pointer rounded-2xl border p-5 sm:p-6 transition-all duration-300 relative overflow-hidden ${
                     isActive
-                      ? 'border-indigo-600 bg-white shadow-xl shadow-indigo-900/5 ring-1 ring-indigo-600/20'
-                      : 'border-slate-200/80 bg-white/70 hover:bg-white hover:border-slate-300'
+                      ? 'bg-white border-indigo-600/80 shadow-xl shadow-indigo-950/5 ring-2 ring-indigo-600/20 translate-x-1'
+                      : 'bg-white/80 border-slate-200/90 hover:bg-white hover:border-slate-300 shadow-xs'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-4">
-                      <span className={`font-mono text-sm font-bold ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}>
-                        {step.id}
-                      </span>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-base font-bold text-slate-900">{step.title}</h3>
-                          {isActive && (
-                            <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[10px] font-extrabold text-indigo-600">
-                              {step.badge}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">{step.description}</p>
-                      </div>
-                    </div>
+                  {/* Left Active Accent Bar */}
+                  {isActive && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-indigo-500 to-purple-600 rounded-l-2xl" />
+                  )}
 
-                    <div className="shrink-0 pt-0.5">
-                      {isActive ? (
-                        <div className="h-2.5 w-2.5 rounded-full bg-indigo-600 animate-pulse" />
-                      ) : (
-                        <span className="text-[11px] text-slate-400 font-semibold">{step.id}/08</span>
-                      )}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3.5">
+                      <span className={`font-mono text-xs font-black px-2.5 py-1 rounded-lg shrink-0 ${
+                        isActive ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {moment.number}
+                      </span>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base sm:text-lg font-extrabold text-slate-900 leading-snug">
+                            {moment.title}
+                          </h3>
+                          <span className={`px-2 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider ${moment.badgeColor}`}>
+                            {moment.badge}
+                          </span>
+                        </div>
+
+                        <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+                          {moment.description}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -215,207 +193,261 @@ export function MessageToMoneyWorkflow() {
             })}
           </div>
 
-          {/* Right Side: Sticky 3D Phone Screen showing real-time step transformation */}
-          <div className="lg:col-span-6 sticky top-28 flex justify-center">
+          {/* RIGHT SIDE: 3D iPhone Product Theater */}
+          <div className="lg:col-span-6 sticky top-24 flex justify-center w-full">
             <div className="w-full max-w-sm">
-              <Iphone3D glowColor="rgba(99, 102, 241, 0.15)">
-                <div className="h-full bg-slate-950 text-white flex flex-col justify-between p-4 overflow-hidden relative">
+              <Iphone3D glowColor="rgba(99, 102, 241, 0.18)">
+                <div className="h-full w-full bg-[#efeae2] font-sans text-slate-900 flex flex-col justify-between overflow-hidden select-none">
                   
-                  {/* Phone Header Bar */}
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800 text-xs text-slate-400 font-semibold">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>BizMate Sales OS</span>
+                  {/* iPhone Top Status Bar */}
+                  <div className="flex items-center justify-between bg-[#075e54] px-5 pt-3 pb-1 text-[11px] font-semibold text-white">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px]">5G</span>
+                      <div className="h-2.5 w-4 rounded-xs border border-white p-0.5">
+                        <div className="h-full w-full bg-white rounded-2xs" />
+                      </div>
                     </div>
-                    <span className="text-indigo-400 font-bold font-mono">Step {currentStep.id} of 08</span>
                   </div>
 
-                  {/* Phone Body Visual */}
-                  <div className="my-auto py-4">
+                  {/* WhatsApp Dynamic Header */}
+                  <header className="relative z-10 flex items-center gap-2.5 bg-[#075e54] px-3.5 py-2.5 text-white shadow-md">
+                    <ChevronLeft className="h-4 w-4 opacity-90" />
+
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-xs text-white shadow-inner ${currentMoment.headerIconColor}`}>
+                      <Sparkles className="h-4 w-4 text-white" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <p className="truncate text-xs font-bold leading-tight">{currentMoment.headerTitle}</p>
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-300 fill-emerald-400/20 shrink-0" />
+                      </div>
+                      <p className="text-[9.5px] text-white/80">{currentMoment.headerSub}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 text-white/90">
+                      <Video className="h-4 w-4" />
+                      <Phone className="h-4 w-4" />
+                      <MoreVertical className="h-4 w-4" />
+                    </div>
+                  </header>
+
+                  {/* WhatsApp Chat Wall & Active Screen Content */}
+                  <main
+                    className="relative flex-1 p-3.5 overflow-y-auto space-y-3 scrollbar-hide text-xs"
+                    style={{
+                      backgroundImage: `url('/whatsappChatWallPaper.jpg')`,
+                      backgroundSize: '320px auto',
+                      backgroundRepeat: 'repeat',
+                    }}
+                  >
+                    {/* Date Divider */}
+                    <div className="flex justify-center my-1">
+                      <span className="rounded-md bg-white/80 backdrop-blur-xs px-2.5 py-1 text-[10px] font-bold text-slate-600 shadow-2xs">
+                        Today · BizMate Automation
+                      </span>
+                    </div>
+
                     <AnimatePresence mode="wait">
                       <motion.div
-                        key={currentStep.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-4"
+                        key={currentMoment.id}
+                        initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                        transition={{ duration: 0.25, ease: 'easeOut' }}
+                        className="space-y-3"
                       >
-                        {/* Step Icon Badge */}
-                        <div className="flex justify-center">
-                          <div className="h-12 w-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shadow-inner">
-                            {React.createElement(currentStep.icon, { className: 'h-6 w-6' })}
-                          </div>
-                        </div>
-
-                        {/* Visual Card per Step */}
-                        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-lg">
-                          <div className="text-center mb-3">
-                            <span className="text-[10px] uppercase tracking-wider font-extrabold text-indigo-400">
-                              {currentStep.subtitle}
-                            </span>
-                            <h4 className="text-base font-bold text-white mt-0.5">{currentStep.title}</h4>
-                          </div>
-
-                          {/* Specific mockup contents */}
-                          {currentStep.screenType === 'inquiry' && (
-                            <div className="rounded-xl bg-slate-950 p-3 text-xs space-y-2 border border-slate-800">
-                              <div className="flex items-center justify-between text-[10px] text-slate-400">
-                                <span>{currentStep.chatData?.user}</span>
-                                <span>{currentStep.chatData?.time}</span>
-                              </div>
-                              <p className="text-slate-200 bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                                "{currentStep.chatData?.text}"
-                              </p>
-                              <div className="flex justify-end">
-                                <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
-                                  Pending Response
-                                </span>
+                        {/* MOMENT 01: Customer Asks */}
+                        {activeMoment === 0 && (
+                          <>
+                            {/* Customer Message */}
+                            <div className="flex justify-start">
+                              <div className="max-w-[85%] rounded-2xl rounded-tl-xs bg-white p-3 text-slate-900 shadow-xs border border-slate-200/60 space-y-1">
+                                <p className="text-xs font-medium leading-relaxed">
+                                  "10 black kurtis chahiye, size mix chalega?"
+                                </p>
+                                <span className="block text-[9px] text-slate-400 text-right">09:24 AM</span>
                               </div>
                             </div>
-                          )}
 
-                          {currentStep.screenType === 'understanding' && (
-                            <div className="rounded-xl bg-emerald-950/40 p-3 text-xs space-y-2 border border-emerald-500/30">
-                              <div className="flex items-center justify-between text-[10px] text-emerald-400 font-bold">
-                                <span>{currentStep.chatData?.agent}</span>
-                                <span>⚡ 0.8s</span>
-                              </div>
-                              <p className="text-emerald-100 bg-emerald-900/30 p-2.5 rounded-lg border border-emerald-800/50">
-                                "{currentStep.chatData?.text}"
-                              </p>
-                              <div className="flex justify-between items-center text-[10px] text-emerald-400 font-semibold">
-                                <span>Match Confidence: 99.4%</span>
-                                <span className="text-emerald-300">Ready to Reserve</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {currentStep.screenType === 'inventory' && (
-                            <div className="rounded-xl bg-slate-950 p-3 text-xs space-y-3 border border-slate-800">
-                              <div className="flex justify-between items-center">
-                                <span className="font-bold text-white">{currentStep.stockInfo?.itemName}</span>
-                                <span className="text-[10px] font-mono text-indigo-400">7 Ready to Ship</span>
-                              </div>
-                              <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
-                                <div className="bg-emerald-500 h-full w-[70%]" />
-                              </div>
-                              <div className="text-[10px] text-center text-emerald-400 font-semibold">
-                                ✓ Availability and pricing confirmed
-                              </div>
-                            </div>
-                          )}
-
-                          {currentStep.screenType === 'quote' && (
-                            <div className="rounded-xl bg-slate-950 p-3 text-xs space-y-2 border border-slate-800">
-                              <div className="flex justify-between text-[10px] text-slate-400 pb-1 border-b border-slate-800">
-                                <span>{currentStep.invoiceData?.number}</span>
-                                <span className="text-emerald-400 font-bold">GST INCLUDED</span>
-                              </div>
-                              <div className="space-y-1 text-slate-300">
-                                <div className="flex justify-between">
-                                  <span>Item:</span>
-                                  <span>{currentStep.invoiceData?.item}</span>
+                            {/* Sales Agent Reply */}
+                            <div className="flex justify-end">
+                              <div className="max-w-[88%] rounded-2xl rounded-tr-xs bg-[#dcf8c6] p-3 text-slate-900 shadow-xs border border-emerald-200/60 space-y-1">
+                                <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-800 mb-1">
+                                  <Sparkles className="h-3 w-3 text-emerald-600" />
+                                  <span>BizMate Sales Agent</span>
                                 </div>
-                                <div className="flex justify-between text-slate-400">
-                                  <span>Delivery:</span>
-                                  <span>{currentStep.invoiceData?.delivery}</span>
-                                </div>
-                                <div className="flex justify-between font-bold text-white text-sm pt-2 border-t border-slate-800">
-                                  <span>Total:</span>
-                                  <span className="text-indigo-400">{currentStep.invoiceData?.total}</span>
+                                <p className="text-xs font-medium leading-relaxed">
+                                  Haan bilkul! Main instant stock check karke pricing aur billing summary aapko share karti hoon.
+                                </p>
+                                <div className="flex items-center justify-end gap-1 text-[9px] text-emerald-700">
+                                  <span>09:24 AM</span>
+                                  <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
                                 </div>
                               </div>
                             </div>
-                          )}
 
-                          {currentStep.screenType === 'manager_approval' && (
-                            <div className="rounded-xl bg-slate-950 p-3 text-xs space-y-3 border border-slate-800">
-                              <div className="flex justify-between items-center text-slate-400 text-[10px]">
-                                <span>Policy Verification</span>
-                                <span className="text-emerald-400 font-bold">Passed</span>
-                              </div>
-                              <div className="bg-indigo-950/60 p-3 rounded-lg border border-indigo-800/40 text-center">
-                                <span className="text-[10px] text-indigo-300 block">Manager Agent Status</span>
-                                <span className="text-sm font-extrabold text-white">{currentStep.approvalStatus}</span>
+                            {/* Autonomous Intent Badge */}
+                            <div className="flex justify-center pt-2">
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-extrabold shadow-sm">
+                                <Check className="h-3 w-3 stroke-[3]" />
+                                Autonomous Catalog Match
+                              </span>
+                            </div>
+                          </>
+                        )}
+
+                        {/* MOMENT 02: BizMate checks before you promise */}
+                        {activeMoment === 1 && (
+                          <>
+                            {/* Customer Inquiry Context */}
+                            <div className="flex justify-start">
+                              <div className="max-w-[80%] rounded-2xl rounded-tl-xs bg-white p-2.5 text-slate-800 shadow-xs border border-slate-200/60 text-[11px]">
+                                <span className="text-[9px] text-slate-400 font-bold block">BUYER INQUIRY</span>
+                                "10 black kurtis, mixed sizes"
                               </div>
                             </div>
-                          )}
 
-                          {currentStep.screenType === 'payment_link' && (
-                            <div className="rounded-xl bg-indigo-950/50 p-3 text-xs space-y-3 border border-indigo-500/30 text-center">
-                              <div className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
-                                <CreditCard className="h-3 w-3" />
-                                UPI / Razorpay Smart Link
-                              </div>
-                              <div className="bg-slate-950 p-2.5 rounded-lg font-mono text-[11px] text-indigo-300 truncate border border-indigo-900/60">
-                                {currentStep.paymentLink}
-                              </div>
-                              <div className="rounded-lg bg-emerald-600 text-white font-bold py-2 text-xs shadow-md">
-                                Pay ₹3,850 via GPay / PhonePe / Paytm
-                              </div>
-                            </div>
-                          )}
+                            {/* Stock Check Verification Card */}
+                            <div className="flex justify-end">
+                              <div className="max-w-[92%] rounded-2xl rounded-tr-xs bg-[#dcf8c6] p-3 text-slate-900 shadow-xs border border-emerald-200/60 space-y-2">
+                                <div className="flex items-center justify-between text-[10px] font-bold text-emerald-900 border-b border-emerald-300/60 pb-1">
+                                  <span>STOCK &amp; PRICING CHECK</span>
+                                  <span className="text-emerald-700 font-mono">09:25 AM</span>
+                                </div>
 
-                          {currentStep.screenType === 'payment_done' && (
-                            <div className="rounded-xl bg-emerald-950/60 p-4 text-xs space-y-3 border border-emerald-500/40 text-center">
-                              <div className="flex justify-center">
-                                <div className="h-10 w-10 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center font-bold">
-                                  <Check className="h-6 w-6 stroke-[3]" />
+                                <div className="bg-white/90 rounded-xl p-2.5 space-y-1.5 text-xs border border-emerald-200/80">
+                                  <div className="flex justify-between items-center font-bold text-slate-900">
+                                    <span>Black Kurti (Cotton)</span>
+                                    <span className="text-emerald-600 text-[11px]">7 In Stock</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 flex justify-between">
+                                    <span>Rate: ₹550 / piece</span>
+                                    <span>Subtotal: ₹3,850</span>
+                                  </div>
+                                  <div className="pt-1 flex items-center gap-1 text-[10px] font-bold text-emerald-700">
+                                    <Check className="h-3 w-3 text-emerald-600 stroke-[3]" />
+                                    <span>Availability &amp; Price Verified</span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-1 text-[9px] text-emerald-700">
+                                  <span>09:25 AM</span>
+                                  <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
                                 </div>
                               </div>
-                              <h5 className="font-extrabold text-emerald-300 text-sm">{currentStep.status}</h5>
-                              <p className="text-[10px] text-emerald-400">
-                                Tax Invoice #INV-2026-0891 delivered to customer on WhatsApp.
-                              </p>
                             </div>
-                          )}
+                          </>
+                        )}
 
-                          {currentStep.screenType === 'invoice_shared' && (
-                            <div className="rounded-xl bg-slate-950 p-3 text-xs space-y-3 border border-slate-800">
-                              <div className="flex justify-between items-center text-slate-400 text-[10px]">
-                                <span>WhatsApp Delivery</span>
-                                <span className="text-emerald-400 font-bold font-mono">DELIVERED</span>
-                              </div>
-                              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 text-center font-mono text-indigo-300 text-xs">
-                                📄 {currentStep.invoiceNumber}
-                              </div>
-                              <div className="text-[10px] text-slate-400 text-center">
-                                Tax receipt & tracking details sent to buyer.
+                        {/* MOMENT 03: Quote to payment */}
+                        {activeMoment === 2 && (
+                          <>
+                            {/* WhatsApp Quote Card */}
+                            <div className="flex justify-end">
+                              <div className="max-w-[92%] rounded-2xl rounded-tr-xs bg-[#dcf8c6] p-3 text-slate-900 shadow-xs border border-emerald-200/60 space-y-2">
+                                <div className="flex items-center justify-between text-[10px] font-bold text-emerald-900 border-b border-emerald-300/60 pb-1">
+                                  <span>QUOTATION #Q-8910</span>
+                                  <span className="text-emerald-700 font-mono">09:26 AM</span>
+                                </div>
+
+                                <div className="bg-white/90 rounded-xl p-2.5 space-y-1.5 text-xs border border-emerald-200/80">
+                                  <div className="flex justify-between font-bold text-slate-900">
+                                    <span>7 × Black Kurti</span>
+                                    <span>₹3,850</span>
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 flex justify-between">
+                                    <span>GST &amp; Express Shipping</span>
+                                    <span className="text-emerald-600 font-bold">Included</span>
+                                  </div>
+                                </div>
+
+                                {/* Instant UPI Payment Button */}
+                                <div className="pt-0.5">
+                                  <div className="w-full py-2 px-3 rounded-xl bg-indigo-600 text-white font-extrabold text-xs text-center shadow-md flex items-center justify-center gap-1.5">
+                                    <CreditCard className="h-3.5 w-3.5" />
+                                    <span>Pay ₹3,850 via GPay / UPI</span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          )}
-                        </div>
+
+                            {/* Payment Confirmation & Tax Invoice Receipt */}
+                            <div className="flex justify-end">
+                              <div className="max-w-[92%] rounded-2xl bg-[#dcf8c6] p-3 text-slate-900 shadow-xs border border-emerald-200/60 space-y-2">
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900">
+                                  <div className="h-4 w-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
+                                    <Check className="h-3 w-3 stroke-[3]" />
+                                  </div>
+                                  <span>Payment Received — ₹3,850</span>
+                                </div>
+
+                                <div className="bg-white/90 rounded-xl p-2 flex items-center justify-between text-xs border border-emerald-200/80">
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-indigo-600" />
+                                    <div>
+                                      <span className="font-bold text-slate-900 block text-[11px]">Tax_Invoice_INV-0891.pdf</span>
+                                      <span className="text-[9px] text-slate-400">124 KB · Delivered</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-1 text-[9px] text-emerald-700">
+                                  <span>09:27 AM</span>
+                                  <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {/* MOMENT 04: The rest keeps moving */}
+                        {activeMoment === 3 && (
+                          <>
+                            {/* Manager Agent Briefing Bubble */}
+                            <div className="flex justify-end">
+                              <div className="max-w-[95%] rounded-2xl rounded-tr-xs bg-[#dcf8c6] p-3 text-slate-900 shadow-xs border border-emerald-200/60 space-y-2">
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-950 border-b border-emerald-300/60 pb-1">
+                                  <Bot className="h-4 w-4 text-indigo-600" />
+                                  <span>BizMate Manager Briefing</span>
+                                </div>
+
+                                <p className="text-xs font-medium leading-relaxed text-slate-800">
+                                  Order #0891 (₹3,850) completed! Here is what was handled automatically:
+                                </p>
+
+                                <div className="space-y-1.5 text-[11px] font-medium text-slate-700">
+                                  <div className="flex items-start gap-1.5 bg-white/80 p-1.5 rounded-lg border border-emerald-200/60">
+                                    <span className="font-bold text-indigo-600 shrink-0">📦 Stock:</span>
+                                    <span>Black Kurti inventory updated (-7).</span>
+                                  </div>
+                                  <div className="flex items-start gap-1.5 bg-white/80 p-1.5 rounded-lg border border-emerald-200/60">
+                                    <span className="font-bold text-emerald-600 shrink-0">🧾 Ledger:</span>
+                                    <span>Payment reconciled &amp; GST entry added.</span>
+                                  </div>
+                                  <div className="flex items-start gap-1.5 bg-white/80 p-1.5 rounded-lg border border-emerald-200/60">
+                                    <span className="font-bold text-purple-600 shrink-0">📱 Social:</span>
+                                    <span>Post scheduled on Instagram for 6 PM.</span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center justify-end gap-1 text-[9px] text-emerald-700">
+                                  <span>09:28 AM</span>
+                                  <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </motion.div>
                     </AnimatePresence>
-                  </div>
+                  </main>
 
-                  {/* Bottom Nav Stepper Dots */}
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                    <button
-                      disabled={activeStep === 0}
-                      onClick={() => setActiveStep((prev) => Math.max(0, prev - 1))}
-                      className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-bold text-slate-300 hover:bg-slate-800 disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                      Prev
-                    </button>
-                    <div className="flex gap-1">
-                      {WORKFLOW_STEPS.map((_, i) => (
-                        <div
-                          key={i}
-                          className={`h-1.5 rounded-full transition-all ${
-                            i === activeStep ? 'w-4 bg-indigo-500' : 'w-1.5 bg-slate-800'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      disabled={activeStep === WORKFLOW_STEPS.length - 1}
-                      onClick={() => setActiveStep((prev) => Math.min(WORKFLOW_STEPS.length - 1, prev + 1))}
-                      className="px-3 py-1.5 rounded-lg bg-indigo-600 text-[11px] font-bold text-white hover:bg-indigo-500 disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                      Next
-                    </button>
+                  {/* Bottom Footer Bar */}
+                  <div className="bg-white px-3 py-2 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-bold">
+                    <span>BizMate OS Active</span>
+                    <span className="text-emerald-600 font-mono">● 4 Agents Connected</span>
                   </div>
 
                 </div>
@@ -424,6 +456,7 @@ export function MessageToMoneyWorkflow() {
           </div>
 
         </div>
+
       </div>
     </section>
   );

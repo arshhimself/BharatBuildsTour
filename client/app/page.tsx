@@ -4,9 +4,12 @@ import React from 'react';
 import { Navbar } from '@/components/landing/navbar';
 import { Hero } from '@/components/landing/hero';
 import { FounderVideoSection } from '@/components/landing/FounderVideoSection';
+import { ProductMotionSection } from '@/components/landing/ProductMotionSection';
+import { RealProductDemosSection } from '@/components/landing/RealProductDemosSection';
 import { MessageToMoneyWorkflow } from '@/components/landing/MessageToMoneyWorkflow';
 import { VoiceAISection } from '@/components/landing/VoiceAISection';
 import { MultiAgentSection } from '@/components/landing/MultiAgentSection';
+import { AgentOfficePreviewSection } from '@/components/landing/AgentOfficePreviewSection';
 import { BentoCanvas } from '@/components/landing/BentoCanvas';
 import { ControlRoomPreview } from '@/components/landing/control-room-preview';
 import { WomensFashionStorySection } from '@/components/landing/WomensFashionStorySection';
@@ -22,37 +25,46 @@ export default function LandingPage() {
       <Navbar />
 
       <main>
-        {/* Hero Section with Dual 3D iPhones & Agent Proof Strip */}
+        {/* 1. Hero Section with Dual 3D iPhones & Agent Proof Strip */}
         <Hero />
 
-        {/* Founder Story & Video Section */}
+        {/* 2. Founder Story & Video Section */}
         <FounderVideoSection />
 
-        {/* Scroll-Linked Product Story Workflow (01 Customer Message -> 08 Invoice Shared) */}
+        {/* 3. Product Motion Video Slot / Overview */}
+        <ProductMotionSection />
+
+        {/* 4. Real Product Demo Videos (Sales Agent, Voice AI, Social Agent) */}
+        <RealProductDemosSection />
+
+        {/* 5. Scroll-Linked Product Story Workflow (01 Customer Message -> 08 Invoice Shared) */}
         <MessageToMoneyWorkflow />
 
-        {/* Voice AI Engine Section */}
+        {/* 6. Voice AI Engine Section */}
         <VoiceAISection />
 
-        {/* The AI Team Architecture Map */}
+        {/* 7. The AI Team Architecture Map */}
         <MultiAgentSection />
 
-        {/* One Simple Interface / Asymmetric Bento Grid */}
+        {/* 8. Agent Office Video Preview & Product Walkthrough (Video 4) */}
+        <AgentOfficePreviewSection />
+
+        {/* 9. One Simple Interface / Asymmetric Bento Grid */}
         <BentoCanvas />
 
-        {/* Control Room / Manager Briefing Dashboard Mockup */}
+        {/* 10. Control Room / Manager Briefing Dashboard Mockup */}
         <ControlRoomPreview />
 
-        {/* Primary Business Story (Local Women's Clothing Store) */}
+        {/* 11. Real Business Stories (Zeliora, Crodlin Tech, SA Collection, Kraft) */}
         <WomensFashionStorySection />
 
-        {/* A Day With BizMate Timeline */}
+        {/* 12. A Day With BizMate Timeline */}
         <DayOneTimeline />
 
-        {/* Early Access Prebook Section */}
+        {/* 13. Early Access Prebook Section */}
         <EarlyAccessSection />
 
-        {/* Final CTA Banner */}
+        {/* 14. Final CTA Banner */}
         <FinalCTASection />
       </main>
 

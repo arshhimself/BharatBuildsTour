@@ -1,246 +1,255 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Users, 
-  Sparkles, 
-  Wallet, 
-  Share2, 
-  Package, 
-  MessageCircle, 
-  ArrowRight, 
-  CheckCircle2,
-  ChevronDown
+import React from 'react';
+import { motion } from 'framer-motion';
+import {
+  Sparkles,
+  MessageCircle,
+  Wallet,
+  Share2,
+  Package,
+  CheckCheck,
+  ShieldCheck,
+  User,
+  ArrowRight,
 } from 'lucide-react';
 
-const AGENTS = [
-  {
-    id: 'manager',
-    name: 'Manager Agent',
-    role: 'briefings & decisions',
-    icon: Sparkles,
-    color: 'bg-indigo-600 text-white border-indigo-600',
-    description: 'Summarizes yesterday’s performance, tracks low stock alerts, surface pending payments, and coordinates sub-agents.',
-  },
+const SPECIALISTS = [
   {
     id: 'finance',
     name: 'Finance Agent',
-    role: 'bills & balances',
+    role: 'Bills & balances',
     icon: Wallet,
-    color: 'bg-purple-600 text-white border-purple-600',
-    description: 'Auto-reconciles bank webhooks, tracks outstanding receivables, and updates tax invoice ledgers.',
+    color: 'bg-purple-50 text-purple-700 border-purple-200/80',
+    iconBg: 'bg-purple-600 text-white',
   },
   {
     id: 'social',
     name: 'Social Agent',
-    role: 'content & campaigns',
+    role: 'Content & campaigns',
     icon: Share2,
-    color: 'bg-pink-600 text-white border-pink-600',
-    description: 'Turns new inventory arrivals into Instagram stories, posts, and WhatsApp promotional broadcasts.',
+    color: 'bg-pink-50 text-pink-700 border-pink-200/80',
+    iconBg: 'bg-pink-600 text-white',
   },
   {
     id: 'operation',
     name: 'Operation Agent',
-    role: 'stock & vendors',
+    role: 'Stock & vendors',
     icon: Package,
-    color: 'bg-amber-600 text-white border-amber-600',
-    description: 'Monitors real-time stock levels, generates courier shipping labels, and drafts vendor re-orders.',
+    color: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    iconBg: 'bg-amber-600 text-white',
   },
-  {
-    id: 'sales',
-    name: 'Sales Agent',
-    role: 'customer conversations',
-    icon: MessageCircle,
-    color: 'bg-emerald-600 text-white border-emerald-600',
-    description: 'Handles 24/7 buyer chats on WhatsApp, answers stock availability queries, and delivers payment links.',
-  }
 ];
 
 export function MultiAgentSection() {
-  const [activeAgentId, setActiveAgentId] = useState<string | null>('manager');
-
-  const activeAgent = AGENTS.find((a) => a.id === activeAgentId);
-
   return (
-    <section id="ai-team" className="relative py-24 bg-[#F8FAFF] border-t border-slate-100 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-600 block">
-            THE AI TEAM
-          </span>
+    <section id="ai-team" className="relative py-24 bg-[#F8FAFF] border-t border-slate-200/60 overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-indigo-50/40 rounded-full blur-3xl pointer-events-none -z-10" />
 
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+
+        {/* Section Header */}
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-[11px] font-extrabold uppercase tracking-wider">
+            <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+            <span>THE AI TEAM</span>
+          </div>
+
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 leading-tight">
             You talk to one.<br />
             <span className="text-indigo-600">Your AI team handles the rest.</span>
           </h2>
 
-          <p className="text-base sm:text-lg text-slate-600 font-normal max-w-2xl mx-auto">
-            You do not need to talk to five systems. You talk to Manager Agent. Your customers talk to Sales Agent. The specialists work behind the scenes.
+          <p className="text-base sm:text-lg text-slate-600 font-normal max-w-2xl mx-auto leading-relaxed">
+            You talk to Manager Agent. Your customers talk to Sales Agent. Finance, Social and Operation agents work quietly behind the scenes.
           </p>
         </div>
 
-        {/* Clean Node Hierarchy Canvas */}
-        <div className="mt-16 max-w-4xl mx-auto rounded-3xl border border-slate-200 bg-white p-8 sm:p-12 shadow-xl relative overflow-hidden">
-          
-          {/* Node Diagram Grid */}
-          <div className="relative space-y-10 z-10">
-            
-            {/* Top Level: Owner */}
-            <div className="flex justify-center">
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-900 bg-slate-900 px-6 py-3 text-white shadow-md">
-                <Users className="h-5 w-5 text-indigo-400" />
-                <div>
-                  <h4 className="text-xs font-extrabold text-white">You</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">the owner</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Connecting Vertical Line */}
-            <div className="flex justify-center -my-6">
-              <div className="w-0.5 h-10 bg-indigo-300 animate-pulse" />
-            </div>
-
-            {/* Manager Agent Hub Node */}
-            <div className="flex justify-center">
-              <button
-                onClick={() => setActiveAgentId(activeAgentId === 'manager' ? null : 'manager')}
-                className={`flex items-center gap-3 rounded-2xl border-2 px-6 py-3.5 transition-all shadow-md cursor-pointer ${
-                  activeAgentId === 'manager'
-                    ? 'border-indigo-600 bg-indigo-50 text-slate-900 ring-2 ring-indigo-600/20'
-                    : 'border-indigo-200 bg-white hover:border-indigo-400'
-                }`}
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div className="text-left">
-                  <h4 className="text-sm font-extrabold text-slate-900">Manager Agent</h4>
-                  <p className="text-[11px] text-slate-500 font-medium">briefings & decisions</p>
-                </div>
-              </button>
-            </div>
-
-            {/* Connecting Horizontal Line to 3 Sub-Agents */}
-            <div className="flex justify-around items-center max-w-2xl mx-auto -my-6">
-              <div className="w-1/3 h-0.5 bg-indigo-200" />
-              <div className="w-1/3 h-0.5 bg-indigo-200" />
-            </div>
-
-            {/* 3 Specialist Sub-Agent Nodes */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
-              
-              {/* Finance Agent */}
-              <button
-                onClick={() => setActiveAgentId(activeAgentId === 'finance' ? null : 'finance')}
-                className={`p-4 rounded-2xl border text-center transition-all cursor-pointer ${
-                  activeAgentId === 'finance'
-                    ? 'border-purple-600 bg-purple-50 ring-2 ring-purple-600/20 shadow-md'
-                    : 'border-slate-200 bg-white hover:border-purple-300'
-                }`}
-              >
-                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-purple-600 text-white mb-2">
-                  <Wallet className="h-4 w-4" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Finance Agent</h4>
-                <p className="text-[10px] text-slate-500 mt-0.5 font-medium">bills & balances</p>
-              </button>
-
-              {/* Social Agent */}
-              <button
-                onClick={() => setActiveAgentId(activeAgentId === 'social' ? null : 'social')}
-                className={`p-4 rounded-2xl border text-center transition-all cursor-pointer ${
-                  activeAgentId === 'social'
-                    ? 'border-pink-600 bg-pink-50 ring-2 ring-pink-600/20 shadow-md'
-                    : 'border-slate-200 bg-white hover:border-pink-300'
-                }`}
-              >
-                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-pink-600 text-white mb-2">
-                  <Share2 className="h-4 w-4" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Social Agent</h4>
-                <p className="text-[10px] text-slate-500 mt-0.5 font-medium">content & campaigns</p>
-              </button>
-
-              {/* Operation Agent */}
-              <button
-                onClick={() => setActiveAgentId(activeAgentId === 'operation' ? null : 'operation')}
-                className={`p-4 rounded-2xl border text-center transition-all cursor-pointer ${
-                  activeAgentId === 'operation'
-                    ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-600/20 shadow-md'
-                    : 'border-slate-200 bg-white hover:border-amber-300'
-                }`}
-              >
-                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-amber-600 text-white mb-2">
-                  <Package className="h-4 w-4" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Operation Agent</h4>
-                <p className="text-[10px] text-slate-500 mt-0.5 font-medium">stock & vendors</p>
-              </button>
-
-            </div>
-
-            {/* External Customer Path Row */}
-            <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800">
-                <MessageCircle className="h-4 w-4 text-emerald-600" />
-                <span>Customers</span>
-                <span className="text-[10px] font-normal text-emerald-600">talk to Sales Agent</span>
-              </div>
-
-              <ArrowRight className="h-4 w-4 text-slate-400 hidden sm:block" />
-
-              <button
-                onClick={() => setActiveAgentId(activeAgentId === 'sales' ? null : 'sales')}
-                className={`flex items-center gap-2.5 rounded-full border px-4 py-2 transition-all cursor-pointer ${
-                  activeAgentId === 'sales'
-                    ? 'border-emerald-600 bg-emerald-100 text-emerald-950 ring-2 ring-emerald-600/20'
-                    : 'border-emerald-200 bg-white hover:border-emerald-400 text-slate-900'
-                }`}
-              >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white">
-                  <MessageCircle className="h-3.5 w-3.5" />
-                </div>
-                <span className="text-xs font-bold">Sales Agent</span>
-              </button>
-            </div>
-
+        {/* Specialist Agent System Bar (Background / Top Layer) */}
+        <div className="mt-12 max-w-4xl mx-auto">
+          <div className="text-center mb-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Specialist Agents Working Quietly Behind the Scenes
+            </span>
           </div>
 
-          {/* Active Agent Detail Panel Expansion */}
-          <AnimatePresence>
-            {activeAgent && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {SPECIALISTS.map((agent) => (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mt-8 pt-6 border-t border-slate-100 text-center"
+                key={agent.id}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4 }}
+                className={`rounded-2xl border p-3 flex items-center gap-3 bg-white/80 backdrop-blur-xs shadow-2xs ${agent.color}`}
               >
-                <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-bold text-white mb-2">
-                  <activeAgent.icon className="h-3 w-3 text-indigo-400" />
-                  <span>{activeAgent.name} Role Details</span>
+                <div className={`flex h-8 w-8 items-center justify-center rounded-xl font-bold text-xs shrink-0 ${agent.iconBg}`}>
+                  <agent.icon className="h-4 w-4" />
                 </div>
-                <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto font-normal leading-relaxed">
-                  {activeAgent.description}
-                </p>
-
-                <div className="mt-4">
-                  <Link
-                    href="/agent-office"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
-                  >
-                    <span>Explore AI Team</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-bold text-slate-900 truncate">{agent.name}</h4>
+                  <p className="text-[10px] text-slate-500 font-medium truncate">{agent.role}</p>
                 </div>
               </motion.div>
-            )}
-          </AnimatePresence>
+            ))}
+          </div>
+        </div>
+
+        {/* Primary Dual Conversation Canvas (Hero Visualization) */}
+        <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+
+          {/* LEFT: OWNER → MANAGER AGENT CONVERSATION HERO */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xl flex flex-col justify-between overflow-hidden relative"
+          >
+            {/* Header Badge */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-white">
+                  <User className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-900 leading-tight">OWNER &rarr; MANAGER AGENT</h3>
+                  <span className="text-[10px] text-indigo-600 font-semibold block">WhatsApp Conversation</span>
+                </div>
+              </div>
+              <span className="bg-indigo-50 text-indigo-700 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-indigo-100">
+                You Talk To One
+              </span>
+            </div>
+
+            {/* Conversation UI */}
+            <div className="space-y-3 text-[11px] bg-[#efeae2] p-3.5 rounded-2xl border border-slate-200/60 relative overflow-hidden"
+              style={{
+                backgroundImage: `url('/whatsappChatWallPaper.jpg')`,
+                backgroundSize: '280px auto',
+                backgroundRepeat: 'repeat',
+              }}
+            >
+              <div className="absolute inset-0 bg-white/40 pointer-events-none" />
+
+              {/* Owner Message */}
+              <div className="relative flex justify-end">
+                <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] p-2.5 text-slate-800 shadow-xs">
+                  <p className="leading-snug font-medium">Kal ka business kaisa tha?</p>
+                  <div className="mt-0.5 flex justify-end gap-1 text-[8px] text-slate-500">
+                    <span>09:14 AM</span>
+                    <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Manager Response */}
+              <div className="relative flex justify-start">
+                <div className="max-w-[88%] rounded-2xl rounded-tl-xs bg-white p-3 text-slate-800 shadow-xs space-y-1.5">
+                  <p className="leading-snug font-semibold text-slate-900">
+                    Sales were <strong className="text-slate-900">₹1.84L</strong>. 3 payments are pending. 2 customers need follow-up.
+                  </p>
+
+                  {/* Specialist Agents Background Updates */}
+                  <div className="text-[10px] space-y-1 pt-1 border-t border-slate-100 font-normal">
+                    <div className="flex items-center gap-1.5 text-purple-700 bg-purple-50 p-1.5 rounded-lg border border-purple-100">
+                      <Wallet className="h-3 w-3 shrink-0" />
+                      <span>Finance Agent has reconciled today&apos;s billing.</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-amber-700 bg-amber-50 p-1.5 rounded-lg border border-amber-100">
+                      <Package className="h-3 w-3 shrink-0" />
+                      <span>Operation Agent flagged a stock issue.</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-pink-700 bg-pink-50 p-1.5 rounded-lg border border-pink-100">
+                      <Share2 className="h-3 w-3 shrink-0" />
+                      <span>Social Agent prepared a new-arrivals post.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 text-center">
+              <span className="text-[10.5px] text-slate-500 font-medium">
+                The Manager Agent synthesizes your whole business into simple WhatsApp answers.
+              </span>
+            </div>
+          </motion.div>
+
+          {/* RIGHT: CUSTOMER → SALES AGENT CONVERSATION HERO */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xl flex flex-col justify-between overflow-hidden relative"
+          >
+            {/* Header Badge */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white">
+                  <MessageCircle className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-900 leading-tight">CUSTOMER &rarr; SALES AGENT</h3>
+                  <span className="text-[10px] text-emerald-600 font-semibold block">WhatsApp Conversation</span>
+                </div>
+              </div>
+              <span className="bg-emerald-50 text-emerald-700 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-emerald-100">
+                24/7 Buyer Support
+              </span>
+            </div>
+
+            {/* Conversation UI */}
+            <div className="space-y-3 text-[11px] bg-[#efeae2] p-3.5 rounded-2xl border border-slate-200/60 relative overflow-hidden"
+              style={{
+                backgroundImage: `url('/whatsappChatWallPaper.jpg')`,
+                backgroundSize: '280px auto',
+                backgroundRepeat: 'repeat',
+              }}
+            >
+              <div className="absolute inset-0 bg-white/40 pointer-events-none" />
+
+              {/* Customer Message */}
+              <div className="relative flex justify-end">
+                <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] p-2.5 text-slate-800 shadow-xs">
+                  <p className="leading-snug font-medium">10 black kurtis chahiye. Size mix chalega?</p>
+                  <div className="mt-0.5 flex justify-end gap-1 text-[8px] text-slate-500">
+                    <span>10:24 AM</span>
+                    <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sales Agent Response */}
+              <div className="relative flex justify-start">
+                <div className="max-w-[88%] rounded-2xl rounded-tl-xs bg-white p-2.5 text-slate-800 shadow-xs">
+                  <p className="leading-snug font-medium text-slate-900">
+                    Yes. We have 7 ready to ship. I can prepare a quote for 7.
+                  </p>
+                  <div className="mt-0.5 text-[8px] text-slate-400">10:24 AM</div>
+                </div>
+              </div>
+
+              {/* Quotation & Payment Snippet */}
+              <div className="relative bg-white rounded-xl p-2.5 shadow-sm border border-slate-200/80 text-[10.5px]">
+                <div className="flex justify-between font-bold text-slate-900 border-b border-slate-100 pb-1 mb-1">
+                  <span>Quote #Q7842 (7 Black Kurtis)</span>
+                  <span className="text-emerald-600">₹3,850</span>
+                </div>
+                <button className="w-full mt-1.5 rounded-lg bg-[#25d366] py-1 text-center font-bold text-white text-[10px] shadow-xs">
+                  Pay Securely — ₹3,850
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 text-center">
+              <span className="text-[10.5px] text-slate-500 font-medium">
+                Sales Agent responds instantly to buyer queries and delivers ready-to-pay invoices.
+              </span>
+            </div>
+          </motion.div>
 
         </div>
 

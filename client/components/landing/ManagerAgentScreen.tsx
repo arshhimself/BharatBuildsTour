@@ -2,155 +2,152 @@
 
 import React from 'react';
 import {
-  TrendingUp,
-  PackageX,
-  CreditCard,
-  FileClock,
-  Truck,
-  Users,
+  ChevronLeft,
+  Phone,
+  Video,
+  MoreVertical,
+  CheckCheck,
+  Mic,
+  Paperclip,
+  Smile,
+  ShieldCheck,
   Sparkles,
-  ChevronRight,
-  BellRing,
 } from 'lucide-react';
 
 export function ManagerAgentScreen() {
   return (
-    <div className="flex h-full w-full flex-col bg-[#f8faff] font-sans text-slate-900 select-none">
+    <div className="flex h-full w-full flex-col bg-[#efeae2] font-sans text-slate-900 select-none">
       {/* Top Status Bar Placeholder */}
-      <div className="flex items-center justify-between bg-white px-5 pt-3 pb-1 text-[11px] font-semibold text-slate-900 border-b border-slate-100">
+      <div className="flex items-center justify-between bg-[#075e54] px-5 pt-3 pb-1 text-[11px] font-semibold text-white">
         <span>9:41</span>
         <div className="flex items-center gap-1.5">
           <span className="text-[10px]">5G</span>
-          <div className="h-2.5 w-4 rounded-sm border border-slate-800 p-0.5">
-            <div className="h-full w-full bg-slate-900 rounded-xs" />
+          <div className="h-2.5 w-4 rounded-sm border border-white p-0.5">
+            <div className="h-full w-full bg-white rounded-xs" />
           </div>
         </div>
       </div>
 
-      {/* Header */}
-      <header className="flex items-center justify-between bg-white px-4 py-2.5 border-b border-slate-100 shadow-xs">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-xs">
-            ⚡
-          </div>
-          <div>
-            <h2 className="text-xs font-bold leading-tight text-slate-900">BizMate</h2>
-            <p className="text-[9px] font-medium text-indigo-600">Manager Agent</p>
-          </div>
+      {/* WhatsApp Header */}
+      <header className="relative z-10 flex items-center gap-2 bg-[#075e54] px-3 py-2 text-white shadow-md">
+        <ChevronLeft className="h-5 w-5 opacity-90 cursor-pointer" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500 font-bold text-xs text-white shadow-inner">
+          <Sparkles className="h-4 w-4" />
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <BellRing className="h-4 w-4 text-slate-600" />
-            <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-rose-500" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1">
+            <p className="truncate text-xs font-semibold leading-tight">BizMate Manager Agent</p>
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-300 fill-emerald-400/20" />
           </div>
+          <p className="text-[9.5px] text-white/80">online · manager account</p>
+        </div>
+
+        <div className="flex items-center gap-3 text-white/90">
+          <Video className="h-4 w-4 cursor-pointer" />
+          <Phone className="h-4 w-4 cursor-pointer" />
+          <MoreVertical className="h-4 w-4 cursor-pointer" />
         </div>
       </header>
 
-      {/* Content Area */}
-      <main className="flex-1 overflow-y-auto p-3 space-y-2.5 scrollbar-hide text-[11px]">
-        {/* Morning Briefing Banner */}
-        <div className="rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 p-3 text-white shadow-md">
-          <div className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-medium text-white">
-              <Sparkles className="h-2.5 w-2.5 text-amber-300" />
-              Morning Briefing
-            </span>
-            <span className="text-[9px] text-white/70">Today</span>
-          </div>
+      {/* Chat Background & Content */}
+      <main
+        className="relative flex-1 space-y-2.5 overflow-y-auto p-3 text-[11px] scrollbar-hide"
+        style={{
+          backgroundImage: `url('/whatsappChatWallPaper.jpg')`,
+          backgroundSize: '320px auto',
+          backgroundRepeat: 'repeat',
+        }}
+      >
+        {/* Semi-transparent white layer over wallpaper */}
+        <div className="absolute inset-0 bg-white/40 pointer-events-none" />
 
-          <h3 className="mt-2 text-sm font-bold leading-snug">Good morning 👋</h3>
-          <p className="text-[10px] text-indigo-100 mt-0.5 leading-relaxed">
-            Here is what needs your attention today across your store operations.
-          </p>
+        {/* Date Stamp */}
+        <div className="relative mx-auto w-fit rounded-lg bg-white/80 px-2.5 py-0.5 text-[9px] font-medium text-slate-600 shadow-xs">
+          Today
         </div>
 
-        {/* Quick Summary Grid */}
-        <div className="grid grid-cols-2 gap-2">
-          {/* Sales Card */}
-          <div className="rounded-xl bg-white p-2.5 border border-slate-100 shadow-xs">
-            <div className="flex items-center justify-between text-slate-500">
-              <span className="text-[9.5px] font-medium">Sales Yesterday</span>
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+        {/* Message 1: Owner */}
+        <div className="relative flex justify-end">
+          <div className="max-w-[85%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] px-3 py-2 text-slate-800 shadow-xs">
+            <p className="leading-snug">Good morning, kal ka business kaisa tha? Aur kya important hai?</p>
+            <div className="mt-0.5 flex justify-end gap-1 text-[8.5px] text-slate-500">
+              <span>09:14</span>
+              <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
             </div>
-            <p className="mt-1 text-sm font-extrabold text-slate-900">₹1.84L</p>
-            <span className="text-[8.5px] font-semibold text-emerald-600">↑ 12% vs prev day</span>
-          </div>
-
-          {/* Low Stock Card */}
-          <div className="rounded-xl bg-amber-50/70 p-2.5 border border-amber-200/60 shadow-xs">
-            <div className="flex items-center justify-between text-amber-800">
-              <span className="text-[9.5px] font-medium">Low Stock</span>
-              <PackageX className="h-3.5 w-3.5 text-amber-600" />
-            </div>
-            <p className="mt-1 text-sm font-extrabold text-amber-900">7 items</p>
-            <span className="text-[8.5px] font-semibold text-amber-700">Action required</span>
           </div>
         </div>
 
-        {/* Action Items List */}
-        <div className="space-y-1.5">
-          <p className="text-[9.5px] font-bold tracking-wider uppercase text-slate-400 px-1">
-            Important Updates
-          </p>
-
-          {/* Item 1: Pending Payments */}
-          <div className="flex items-center justify-between rounded-xl bg-white p-2.5 border border-slate-100 shadow-xs hover:border-slate-200 transition-colors">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-                <CreditCard className="h-3.5 w-3.5" />
-              </div>
-              <div>
-                <p className="text-[10.5px] font-semibold text-slate-900 leading-tight">Pending Payments</p>
-                <p className="text-[9px] text-slate-500">3 payments · ₹42,500 total</p>
-              </div>
+        {/* Message 2: Manager Agent */}
+        <div className="relative flex justify-start">
+          <div className="max-w-[88%] rounded-2xl rounded-tl-xs bg-white px-3.5 py-2 text-slate-800 shadow-xs space-y-1.5">
+            <p className="font-semibold text-slate-900 leading-snug">Good morning 👋</p>
+            <p className="leading-snug">Yesterday&apos;s sales were <strong className="text-slate-900">₹1.84L</strong>.</p>
+            <div className="text-[10.5px] leading-relaxed text-slate-700 space-y-0.5 pl-1 border-l-2 border-indigo-500 my-1 bg-indigo-50/50 p-1.5 rounded-r-lg">
+              <p className="font-medium text-slate-800">You have:</p>
+              <p>• 3 pending payments</p>
+              <p>• 2 customer follow-ups</p>
+              <p>• 1 vendor price update</p>
+              <p>• 7 low-stock items</p>
             </div>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+            <p className="text-[10px] text-slate-500">I&apos;ll keep these organized for you.</p>
+            <div className="mt-0.5 text-[8.5px] text-slate-400">09:14</div>
           </div>
+        </div>
 
-          {/* Item 2: Expiring Quotes */}
-          <div className="flex items-center justify-between rounded-xl bg-white p-2.5 border border-slate-100 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-                <FileClock className="h-3.5 w-3.5" />
-              </div>
-              <div>
-                <p className="text-[10.5px] font-semibold text-slate-900 leading-tight">Quotes Expiring</p>
-                <p className="text-[9px] text-slate-500">2 quotes expiring in next 24h</p>
-              </div>
+        {/* Message 3: Owner */}
+        <div className="relative flex justify-end">
+          <div className="max-w-[65%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] px-3 py-1.5 text-slate-800 shadow-xs">
+            <p className="leading-snug">Black kurti ka stock?</p>
+            <div className="mt-0.5 flex justify-end gap-1 text-[8.5px] text-slate-500">
+              <span>09:15</span>
+              <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
             </div>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
           </div>
+        </div>
 
-          {/* Item 3: Vendor Update */}
-          <div className="flex items-center justify-between rounded-xl bg-white p-2.5 border border-slate-100 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
-                <Truck className="h-3.5 w-3.5" />
-              </div>
-              <div>
-                <p className="text-[10.5px] font-semibold text-slate-900 leading-tight">Vendor Price Update</p>
-                <p className="text-[9px] text-slate-500">Price updated from 2 vendors</p>
-              </div>
-            </div>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+        {/* Message 4: Manager Agent */}
+        <div className="relative flex justify-start">
+          <div className="max-w-[85%] rounded-2xl rounded-tl-xs bg-white px-3 py-2 text-slate-800 shadow-xs space-y-1">
+            <p className="leading-snug font-medium text-slate-900">7 pieces currently available.</p>
+            <p className="leading-snug text-slate-600 text-[10.5px]">I can also prepare a follow-up for customers who asked about it.</p>
+            <div className="mt-0.5 text-[8.5px] text-slate-400">09:15</div>
           </div>
+        </div>
 
-          {/* Item 4: Customer Follow-ups */}
-          <div className="flex items-center justify-between rounded-xl bg-white p-2.5 border border-slate-100 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
-                <Users className="h-3.5 w-3.5" />
-              </div>
-              <div>
-                <p className="text-[10.5px] font-semibold text-slate-900 leading-tight">Customer Follow-ups</p>
-                <p className="text-[9px] text-slate-500">5 customers pending reply</p>
-              </div>
+        {/* Message 5: Owner */}
+        <div className="relative flex justify-end">
+          <div className="max-w-[75%] rounded-2xl rounded-tr-xs bg-[#d9fdd3] px-3 py-1.5 text-slate-800 shadow-xs">
+            <p className="leading-snug">Social media ke liye kuch suggest karo.</p>
+            <div className="mt-0.5 flex justify-end gap-1 text-[8.5px] text-slate-500">
+              <span>09:16</span>
+              <CheckCheck className="h-3 w-3 text-[#53bdeb]" />
             </div>
-            <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+          </div>
+        </div>
+
+        {/* Message 6: Manager Agent */}
+        <div className="relative flex justify-start">
+          <div className="max-w-[88%] rounded-2xl rounded-tl-xs bg-white px-3 py-2 text-slate-800 shadow-xs space-y-1">
+            <p className="leading-snug text-slate-800">
+              <strong className="text-pink-600 font-semibold">Social Agent</strong> has prepared 3 new-arrival post ideas. Want to review them?
+            </p>
+            <div className="mt-0.5 text-[8.5px] text-slate-400">09:16</div>
           </div>
         </div>
       </main>
+
+      {/* Input Bar */}
+      <footer className="flex items-center gap-1.5 bg-[#f0f2f5] px-2 py-2">
+        <div className="flex flex-1 items-center gap-2 rounded-full bg-white px-3 py-1.5 text-slate-400 text-[10px]">
+          <Smile className="h-4 w-4 text-slate-400" />
+          <span className="flex-1 text-slate-400 truncate">Type a message...</span>
+          <Paperclip className="h-4 w-4 text-slate-400" />
+        </div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#075e54] text-white">
+          <Mic className="h-4 w-4" />
+        </div>
+      </footer>
     </div>
   );
 }
