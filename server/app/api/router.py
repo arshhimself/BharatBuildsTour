@@ -11,6 +11,7 @@ from app.modules.payments.router import router as razorpay_router
 from app.modules.payments.routes import router as payments_router
 from app.modules.pricing.routes import router as pricing_router
 from app.modules.runs.router import router as runs_router
+from app.modules.early_access.routes import router as early_access_router
 from app.modules.whatsapp.router import router as whatsapp_router
 
 router = APIRouter()
@@ -26,3 +27,4 @@ router.include_router(razorpay_router)
 router.include_router(whatsapp_router)
 router.include_router(runs_router)
 router.include_router(checkout_router)
+router.include_router(early_access_router)

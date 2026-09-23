@@ -19,6 +19,7 @@ MODEL_MODULES = (
     "app.modules.payments.models",
     "app.modules.invoices.models",
     "app.modules.commerce.models",
+    "app.modules.early_access.models",
 )
 
 

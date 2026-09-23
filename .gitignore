@@ -40,3 +40,8 @@ artifacts/
 tfplan*
 
 aamir-work-readme.md
+
+# Large media files
+client/public/media/*.MOV
+client/public/media/*.mp4
+!client/public/media/BizMateLaunchVideo.mp4
