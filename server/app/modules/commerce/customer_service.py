@@ -93,6 +93,18 @@ def load_commerce_state(
             continue
         if context.get("version") not in {1, CONTEXT_VERSION}:
             continue
+
+        order_id = context.get("order_id")
+        if order_id:
+            from app.modules.commerce.models import Order
+            try:
+                order_uuid = UUID(order_id)
+                order_status = db.scalar(select(Order.status).where(Order.id == order_uuid))
+                if order_status in {"paid", "confirmed", "processing", "shipped", "delivered", "cancelled", "refund_pending", "refunded"}:
+                    return state  # which is currently _empty_state()
+            except ValueError:
+                pass
+
         state.update({key: value for key, value in context.items() if key in state})
         state["version"] = CONTEXT_VERSION
         return state

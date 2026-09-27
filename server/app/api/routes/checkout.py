@@ -369,6 +369,39 @@ def process_test_payment(token: str, db: Session = Depends(get_db)):
     session_rec.status = "completed"
     session_rec.completed_at = now
 
+    text_msg = (
+        f"Payment received ✅\n"
+        f"Order #{str(order.id)[:8]} confirmed!\n"
+        f"Invoice #{invoice.invoice_number} generate ho gaya hai. Below invoice pdf check kar lo 👇"
+    )
+
+    if buyer and buyer.whatsapp_e164:
+        from app.modules.whatsapp.models import WhatsAppMessage
+        from app.modules.commerce.customer_service import _empty_state
+        from app.core.config import get_settings
+        import uuid
+
+        clean_state = _empty_state()
+        clean_state["last_intent"] = "payment_confirmed"
+
+        sending_phone_id = (
+            get_settings().whatsapp_test_phone_number_id or get_settings().whatsapp_biz_phone_number_id
+        )
+
+        conf_msg = WhatsAppMessage(
+            provider_message_id=f"out-conf-{uuid.uuid4()}",
+            direction="out",
+            business_id=session_rec.business_id,
+            phone_number_id=sending_phone_id,
+            wa_id=buyer.whatsapp_e164,
+            payload={
+                "text": text_msg,
+                "message_type": "text",
+                "commerce_context": clean_state,
+            }
+        )
+        db.add(conf_msg)
+
     # 7. COMMIT DB TRANSACTION BEFORE ANY NETWORK / WHATSAPP CALLS
     db.commit()
 
@@ -384,11 +417,7 @@ def process_test_payment(token: str, db: Session = Depends(get_db)):
                 settings.whatsapp_test_phone_number_id or settings.whatsapp_biz_phone_number_id
             )
 
-            text_msg = (
-                f"Payment received ✅\n"
-                f"Order #{str(order.id)[:8]} confirmed!\n"
-                f"Invoice #{invoice.invoice_number} generate ho gaya hai. Below invoice pdf check kar lo 👇"
-            )
+            # Send the text message synchronously via the provider client
             send_whatsapp_message(buyer.whatsapp_e164, text_msg, phone_number_id=sending_phone_id)
 
             send_whatsapp_media(
