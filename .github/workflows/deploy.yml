@@ -55,7 +55,7 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: server-task-def.json
-          container-name: stockaware-server
+          container-name: server
           image: ${{ env.ECR_REGISTRY }}/stockaware-server:${{ github.sha }}
 
       - name: Deploy server task definition
@@ -74,7 +74,7 @@ jobs:
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: client-task-def.json
-          container-name: stockaware-client
+          container-name: client
           image: ${{ env.ECR_REGISTRY }}/stockaware-client:${{ github.sha }}
 
       - name: Deploy client task definition
