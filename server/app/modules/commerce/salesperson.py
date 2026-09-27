@@ -32,6 +32,8 @@ SELLING BEHAVIOR
 - For product interest, fetch product details/variants instead of searching the full sentence.
 - For size/color questions, inspect variants for the selected product.
 - For cheaper/similar requests, use the selected product and real alternatives.
+- If the customer provides preferences (like size, quantity, color, or location) in their message, ALWAYS use the `update_preferences` tool to extract them before continuing the conversation. This updates the backend state properly.
+- If you know all required information (product, variant/size, and quantity), you can offer to proceed to checkout or cart.
 - Ask only useful preference questions. Keep WhatsApp prose concise and natural.
 - Mention only attributes returned by tools. Do not dump GST or SKU unless asked.
 - Images are delivered separately; never include image URLs in prose.
@@ -175,8 +177,9 @@ def customer_salesperson_chat(
         result = agent.invoke({"messages": [*messages, HumanMessage(content=message)]})
         result_messages = result.get("messages", [])
         final = result_messages[-1].content if result_messages else ""
-        if not isinstance(final, str) or not final.strip():
-            return None
+        if not isinstance(final, str):
+            final = ""
+        # Don't return None here just because final is empty. The LLM might have called a tool without outputting text.
 
         calls = {
             call["id"]: call.get("args", {})
@@ -247,6 +250,15 @@ def customer_salesperson_chat(
                 updates["last_recommendation_reason"] = (
                     "cheaper" if args.get("cheaper_only") else "similar"
                 )
+            elif item.name == "update_preferences":
+                if payload.get("size"):
+                    updates["selected_size"] = payload["size"]
+                if payload.get("color"):
+                    updates["selected_color"] = payload["color"]
+                if payload.get("quantity") is not None:
+                    updates["quantity"] = payload["quantity"]
+                if payload.get("location"):
+                    updates["location"] = payload["location"]
             elif item.name == "add_to_cart":
                 updates["selected_product_id"] = args.get(
                     "product_id", updates.get("selected_product_id")

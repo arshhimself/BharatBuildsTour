@@ -376,16 +376,18 @@ def process_test_payment(token: str, db: Session = Depends(get_db)):
     )
 
     if buyer and buyer.whatsapp_e164:
-        from app.modules.whatsapp.models import WhatsAppMessage
-        from app.modules.commerce.customer_service import _empty_state
-        from app.core.config import get_settings
         import uuid
+
+        from app.core.config import get_settings
+        from app.modules.commerce.customer_service import _empty_state
+        from app.modules.whatsapp.models import WhatsAppMessage
 
         clean_state = _empty_state()
         clean_state["last_intent"] = "payment_confirmed"
 
         sending_phone_id = (
-            get_settings().whatsapp_test_phone_number_id or get_settings().whatsapp_biz_phone_number_id
+            get_settings().whatsapp_test_phone_number_id
+            or get_settings().whatsapp_biz_phone_number_id
         )
 
         conf_msg = WhatsAppMessage(
@@ -398,7 +400,7 @@ def process_test_payment(token: str, db: Session = Depends(get_db)):
                 "text": text_msg,
                 "message_type": "text",
                 "commerce_context": clean_state,
-            }
+            },
         )
         db.add(conf_msg)
 

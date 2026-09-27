@@ -135,6 +135,7 @@ def _extract_inbound_messages(payload: dict) -> Iterator[dict]:
                     "wa_id": message.get("from"),
                     "buyer_name": contacts.get(message.get("from")),
                     "message_id": message.get("id"),
+                    "replied_to_message_id": message.get("context", {}).get("id"),
                     "type": message.get("type"),
                     "text": text,
                     "requested_output_mode": _detect_requested_output_mode(text),

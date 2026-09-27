@@ -1,14 +1,12 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-
-from app.main import create_app
-from app.db.base import Base
-from app.db.session import get_db
-from app.modules.early_access.models import EarlyAccessLead
-
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
+
+from app.db.session import get_db
+from app.main import create_app
+from app.modules.early_access.models import EarlyAccessLead
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
@@ -99,27 +97,33 @@ def test_duplicate_lead_graceful_response(client: TestClient, db_session: Sessio
 
 def test_invalid_lead_validation(client: TestClient):
     # Invalid email
-    resp1 = client.post("/early-access/leads", json={
-        "full_name": "Test User",
-        "business_name": "Test Business",
-        "phone": "9876543210",
-        "email": "not-an-email",
-        "business_type": "Retail",
-        "city": "Delhi",
-        "about_business": "Test about business details",
-    })
+    resp1 = client.post(
+        "/early-access/leads",
+        json={
+            "full_name": "Test User",
+            "business_name": "Test Business",
+            "phone": "9876543210",
+            "email": "not-an-email",
+            "business_type": "Retail",
+            "city": "Delhi",
+            "about_business": "Test about business details",
+        },
+    )
     assert resp1.status_code == 422
 
     # Invalid phone (too short)
-    resp2 = client.post("/early-access/leads", json={
-        "full_name": "Test User",
-        "business_name": "Test Business",
-        "phone": "123",
-        "email": "test@example.com",
-        "business_type": "Retail",
-        "city": "Delhi",
-        "about_business": "Test about business details",
-    })
+    resp2 = client.post(
+        "/early-access/leads",
+        json={
+            "full_name": "Test User",
+            "business_name": "Test Business",
+            "phone": "123",
+            "email": "test@example.com",
+            "business_type": "Retail",
+            "city": "Delhi",
+            "about_business": "Test about business details",
+        },
+    )
     assert resp2.status_code == 422
 
 
@@ -130,6 +134,7 @@ def test_list_early_access_leads_unauthenticated(client: TestClient):
 
 def test_list_early_access_leads_authenticated(client: TestClient):
     from uuid import uuid4
+
     from app.api.owner_auth import get_current_user
     from app.modules.identity.owner_models import User
 

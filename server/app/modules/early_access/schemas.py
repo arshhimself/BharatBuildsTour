@@ -1,6 +1,6 @@
-from datetime import datetime
 import re
-from typing import Optional
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -12,7 +12,7 @@ class EarlyAccessLeadCreate(BaseModel):
     business_type: str = Field(..., min_length=2, max_length=100)
     city: str = Field(..., min_length=2, max_length=100)
     about_business: str = Field(..., min_length=5, max_length=2000)
-    daily_whatsapp_orders: Optional[str] = Field(default=None, max_length=100)
+    daily_whatsapp_orders: str | None = Field(default=None, max_length=100)
 
     @field_validator("full_name", "business_name", "business_type", "city", "about_business")
     @classmethod
@@ -54,7 +54,7 @@ class EarlyAccessLeadOut(BaseModel):
     business_type: str
     city: str
     about_business: str
-    daily_whatsapp_orders: Optional[str] = None
+    daily_whatsapp_orders: str | None = None
     source: str
     status: str
     payment_status: str

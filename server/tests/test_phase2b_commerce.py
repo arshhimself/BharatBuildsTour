@@ -29,9 +29,17 @@ def test_commerce_cart_lifecycle(pg_session: Session) -> None:
     assert buyer is not None
     assert not buyer.is_customer
 
-    # Fetch a product
+    # Fetch a product and ensure it has enough inventory for the test
     product = pg_session.scalar(select(Product).where(Product.business_id == business_id).limit(1))
     assert product is not None
+    from decimal import Decimal
+
+    from app.modules.inventory.models import Inventory
+
+    inv = pg_session.scalar(select(Inventory).where(Inventory.product_id == product.id))
+    if inv:
+        inv.on_hand_qty = Decimal("10.000")
+        pg_session.commit()
 
     k1 = f"msg-1-{uuid4().hex[:6]}"
     k2 = f"msg-2-{uuid4().hex[:6]}"

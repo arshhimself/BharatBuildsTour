@@ -21,7 +21,42 @@ pytest_plugins = ["test_phase1_postgres"]
 
 @pytest.fixture(autouse=True)
 def no_external_llm(monkeypatch):
-    monkeypatch.setattr(customer_service, "customer_salesperson_chat", lambda *_a, **_k: None)
+    from app.modules.commerce.salesperson import SalespersonTurn
+
+    def _mock_chat(
+        db, business_id, buyer_id, phone_number_id, wa_id, message, previous=None, **kwargs
+    ):
+        text = message.lower()
+        selected_pid = (previous or {}).get("selected_product_id")
+
+        # Size inquiry for a selected product
+        if ("sizes" in text or "size" in text) and selected_pid:
+            from app.modules.commerce.sales_tools import product_facts
+
+            facts = product_facts(db, business_id, [selected_pid], limit=1)
+            if facts:
+                sizes = [v.get("size") for v in facts[0].get("variants", []) if v.get("size")]
+                sizes_text = " / ".join(dict.fromkeys(sizes))
+                return SalespersonTurn(
+                    text=f"Available sizes: {sizes_text}. Kaunsa chahiye?",
+                    tool_call=None,
+                    state_updates={},
+                    outbound_media=[],
+                )
+
+        # Variant availability check
+        if "m hai" in text and selected_pid:
+            return SalespersonTurn(
+                text="M available hai! Cart mein add karein?",
+                tool_call=None,
+                state_updates={},
+                outbound_media=[],
+            )
+
+        # Default: return None to fall through to legacy discovery
+        return None
+
+    monkeypatch.setattr(customer_service, "customer_salesperson_chat", _mock_chat)
 
 
 def _persist_out(

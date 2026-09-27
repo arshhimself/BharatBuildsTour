@@ -1,19 +1,18 @@
-from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.api.owner_auth import CurrentUser
 from app.db.session import get_db
 from app.modules.early_access.schemas import (
     EarlyAccessLeadCreate,
-    EarlyAccessLeadResponse,
     EarlyAccessLeadOut,
+    EarlyAccessLeadResponse,
 )
 from app.modules.early_access.service import (
     create_or_get_early_access_lead,
     get_all_early_access_leads,
 )
-
-from app.api.owner_auth import CurrentUser
 
 router = APIRouter(prefix="/early-access", tags=["early-access"])
 
@@ -40,14 +39,14 @@ def submit_early_access_lead(
         )
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=500,
             detail="Something went wrong while saving your request. Please try again.",
         )
 
 
-@router.get("/leads", response_model=List[EarlyAccessLeadOut])
+@router.get("/leads", response_model=list[EarlyAccessLeadOut])
 def list_early_access_leads(
     current_user: CurrentUser,
     db: Session = Depends(get_db),

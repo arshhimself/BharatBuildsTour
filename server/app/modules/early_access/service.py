@@ -1,5 +1,5 @@
-from datetime import datetime, timezone, timedelta
-from typing import Tuple, List
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -9,19 +9,17 @@ from app.modules.early_access.schemas import EarlyAccessLeadCreate
 
 def create_or_get_early_access_lead(
     db: Session, data: EarlyAccessLeadCreate
-) -> Tuple[EarlyAccessLead, bool]:
+) -> tuple[EarlyAccessLead, bool]:
     """Saves lead to database.
     Checks for duplicate submission (same phone or email within last 1 hour).
     Returns (lead, is_new).
     """
-    cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
+    cutoff = datetime.now(UTC) - timedelta(hours=1)
 
     # Check for recent duplicate
     stmt = (
         select(EarlyAccessLead)
-        .where(
-            (EarlyAccessLead.phone == data.phone) | (EarlyAccessLead.email == data.email)
-        )
+        .where((EarlyAccessLead.phone == data.phone) | (EarlyAccessLead.email == data.email))
         .where(EarlyAccessLead.created_at >= cutoff)
         .order_by(EarlyAccessLead.created_at.desc())
     )
@@ -48,6 +46,6 @@ def create_or_get_early_access_lead(
     return lead, True
 
 
-def get_all_early_access_leads(db: Session, limit: int = 100) -> List[EarlyAccessLead]:
+def get_all_early_access_leads(db: Session, limit: int = 100) -> list[EarlyAccessLead]:
     stmt = select(EarlyAccessLead).order_by(EarlyAccessLead.created_at.desc()).limit(limit)
     return list(db.execute(stmt).scalars().all())

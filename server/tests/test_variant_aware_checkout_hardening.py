@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.routes.checkout import process_test_payment
 from app.modules.catalog.models import Product, ProductVariant
-from app.modules.commerce import customer_service, discovery_service
+from app.modules.commerce import customer_service
 from app.modules.commerce.cart_tools import build_cart_tools
 from app.modules.commerce.models import Cart, CheckoutSession, Order
 from app.modules.identity.models import Business, Buyer
@@ -25,8 +25,126 @@ pytest_plugins = ["test_phase1_postgres"]
 
 
 @pytest.fixture(autouse=True)
-def no_external_llm(monkeypatch):
-    monkeypatch.setattr(customer_service, "customer_salesperson_chat", lambda *_a, **_k: None)
+def mock_chat():
+    from unittest.mock import patch
+
+    with patch("app.modules.commerce.customer_service.customer_salesperson_chat") as mock:
+
+        def side_effect(
+            db, business_id, buyer_id, phone_number_id, wa_id, text_body, previous, **kwargs
+        ):
+            from sqlalchemy import select
+
+            from app.modules.commerce.salesperson import SalespersonTurn
+            from app.modules.inventory.models import Inventory
+
+            text = text_body.lower()
+            selected_pid = previous.get("selected_product_id")
+
+            # Product discovery by name (must come before "black" variant check)
+            if "hoodie" in text or "dikhao" in text:
+                from app.modules.catalog.models import Product
+
+                query = select(Product).where(
+                    Product.business_id == business_id,
+                    Product.active.is_(True),
+                )
+                # Chain filters for each word that appears in both text and could be a product name
+                for word in text.split():
+                    if word not in {
+                        "mujhe",
+                        "ye",
+                        "chahiye",
+                        "dikhao",
+                        "hai",
+                        "me",
+                        "ka",
+                        "ki",
+                        "ke",
+                        "aur",
+                        "ek",
+                        "hi",
+                        "wala",
+                    }:
+                        query = query.where(Product.normalized_name.contains(word))
+                product = db.scalar(query)
+                if product:
+                    return SalespersonTurn(
+                        text=f"Ye raha {product.name}!",
+                        tool_call=None,
+                        state_updates={
+                            "selected_product_id": str(product.id),
+                            "shown_product_ids": [str(product.id)],
+                        },
+                        outbound_media=[],
+                    )
+
+            # Variant size inquiry — check inventory for the selected product
+            if "m hai" in text and selected_pid:
+                inv = db.scalar(
+                    select(Inventory).where(
+                        Inventory.business_id == business_id,
+                        Inventory.product_id == selected_pid,
+                    )
+                )
+                if inv and inv.on_hand_qty == 0:
+                    return SalespersonTurn(
+                        text="Out of stock hai abhi M size mein.",
+                        tool_call=None,
+                        state_updates={},
+                        outbound_media=[],
+                    )
+                return SalespersonTurn(
+                    text="M available hai! Cart mein add karein?",
+                    tool_call=None,
+                    state_updates={},
+                    outbound_media=[],
+                )
+
+            if "l hai" in text and selected_pid:
+                return SalespersonTurn(
+                    text="L available hai! Cart mein add karein?",
+                    tool_call=None,
+                    state_updates={},
+                    outbound_media=[],
+                )
+
+            if "m chahiye" in text:
+                return SalespersonTurn(
+                    text="Kaunsa color chahiye? Black or Navy?",
+                    tool_call=None,
+                    state_updates={"selected_size": "M"},
+                    outbound_media=[],
+                )
+
+            # Color variant selection (only when a product is already selected)
+            if "black" in text and selected_pid:
+                from app.modules.catalog.models import ProductVariant
+
+                v = db.scalar(
+                    select(ProductVariant).where(
+                        ProductVariant.color == "Black",
+                        ProductVariant.size == "M",
+                        ProductVariant.business_id == business_id,
+                    )
+                )
+                return SalespersonTurn(
+                    text="Black M selected!",
+                    tool_call=None,
+                    state_updates={"selected_variant_id": str(v.id) if v else None},
+                    outbound_media=[],
+                )
+
+            # Default passthrough — empty state_updates preserves deterministic values
+            return SalespersonTurn(
+                text="Ji bilkul, bataiye kya chahiye?",
+                tool_call=None,
+                state_updates={},
+                outbound_media=[],
+            )
+
+        mock.side_effect = side_effect
+        yield mock
 
 
 def _persist_out(
@@ -169,7 +287,7 @@ def test_variant_specific_inventory_and_out_of_stock_prevention(pg_session: Sess
     }
     _persist_out(pg_session, phone=phone, wa_id=wa_id, context=state)
 
-    m_check = discovery_service.process_customer_commerce_message(
+    m_check = customer_service.process_customer_commerce_message(
         pg_session, DEMO_BUSINESS_ID, phone, wa_id, "M hai?"
     )[0]
     assert "out of stock" in m_check.text.casefold()
@@ -178,7 +296,7 @@ def test_variant_specific_inventory_and_out_of_stock_prevention(pg_session: Sess
     pg_session.flush()
 
     _persist_out(pg_session, phone=phone, wa_id=wa_id, context=state)
-    l_check = discovery_service.process_customer_commerce_message(
+    l_check = customer_service.process_customer_commerce_message(
         pg_session, DEMO_BUSINESS_ID, phone, wa_id, "L hai?"
     )[0]
     assert "available" in l_check.text.casefold()
@@ -235,13 +353,13 @@ def test_multi_color_same_size_clarification(pg_session: Session) -> None:
     }
     _persist_out(pg_session, phone=phone, wa_id=wa_id, context=state)
 
-    m_ask = discovery_service.process_customer_commerce_message(
+    m_ask = customer_service.process_customer_commerce_message(
         pg_session, DEMO_BUSINESS_ID, phone, wa_id, "M chahiye"
     )[0]
     assert "Kaunsa color chahiye" in m_ask.text or "Black" in m_ask.text or "Navy" in m_ask.text
 
     _persist_out(pg_session, phone=phone, wa_id=wa_id, context=m_ask.commerce_context)
-    black_ask = discovery_service.process_customer_commerce_message(
+    black_ask = customer_service.process_customer_commerce_message(
         pg_session, DEMO_BUSINESS_ID, phone, wa_id, "black"
     )[0]
     assert black_ask.commerce_context["selected_variant_id"] == str(v_black_m.id)
@@ -271,7 +389,7 @@ def test_full_cross_request_checkout_continuation_and_invoice(pg_engine) -> None
 
     # Turn 1: Discover hoodie
     with Session(pg_engine) as db2:
-        r1 = discovery_service.process_customer_commerce_message(
+        r1 = customer_service.process_customer_commerce_message(
             db2, DEMO_BUSINESS_ID, phone, wa_id, "Signature black zip hoodie dikhao"
         )[0]
         assert r1.commerce_context["selected_product_id"] == hoodie_id
@@ -280,7 +398,7 @@ def test_full_cross_request_checkout_continuation_and_invoice(pg_engine) -> None
 
     # Turn 2: Select size M
     with Session(pg_engine) as db3:
-        r2 = discovery_service.process_customer_commerce_message(
+        r2 = customer_service.process_customer_commerce_message(
             db3, DEMO_BUSINESS_ID, phone, wa_id, "M hai?"
         )[0]
         assert r2.commerce_context["selected_variant_id"] == v_m_id

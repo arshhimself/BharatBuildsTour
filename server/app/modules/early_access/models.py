@@ -1,8 +1,7 @@
-from datetime import datetime, timezone
 import uuid
-from typing import Optional
+from datetime import UTC, datetime
 
-from sqlalchemy import String, Text, DateTime
+from sqlalchemy import DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -19,7 +18,7 @@ class EarlyAccessLead(Base):
     business_type: Mapped[str] = mapped_column(String(100), nullable=False)
     city: Mapped[str] = mapped_column(String(100), nullable=False)
     about_business: Mapped[str] = mapped_column(Text, nullable=False)
-    daily_whatsapp_orders: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    daily_whatsapp_orders: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     source: Mapped[str] = mapped_column(String(100), nullable=False, default="website_early_access")
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="new")
@@ -28,11 +27,11 @@ class EarlyAccessLead(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )

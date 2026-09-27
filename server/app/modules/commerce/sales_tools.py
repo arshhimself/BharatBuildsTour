@@ -58,6 +58,13 @@ class CheckVariantInput(BaseModel):
     color: str | None = Field(default=None, max_length=32)
 
 
+class UpdatePreferencesInput(BaseModel):
+    size: str | None = Field(default=None, description="Extracted size preference")
+    color: str | None = Field(default=None, description="Extracted color preference")
+    quantity: int | None = Field(default=None, description="Extracted quantity")
+    location: str | None = Field(default=None, description="Extracted delivery address or location")
+
+
 class FilterProductsInput(BaseModel):
     min_price_paise: int | None = Field(default=None, ge=0)
     max_price_paise: int | None = Field(default=None, ge=0)
@@ -470,6 +477,17 @@ def build_customer_sales_tools(
             name="get_store_info",
             description="Fetch authoritative store information and policies.",
             args_schema=EmptyInput,
+        ),
+        StructuredTool.from_function(
+            lambda size=None, color=None, quantity=None, location=None: {
+                "size": size,
+                "color": color,
+                "quantity": quantity,
+                "location": location,
+            },
+            name="update_preferences",
+            description="Extract customer preferences (size, color, quantity, location) from natural language without mutating authoritative backend state. Use this to acknowledge multi-slot customer messages.",
+            args_schema=UpdatePreferencesInput,
         ),
     ]
     if buyer_id is not None:

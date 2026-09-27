@@ -69,6 +69,7 @@ def _empty_state() -> dict[str, Any]:
         "checkout_session_id": None,
         "checkout_stage": None,
         "last_recommendation_reason": None,
+        "shipping_address": None,
         "tool_call": None,
     }
 
@@ -97,10 +98,20 @@ def load_commerce_state(
         order_id = context.get("order_id")
         if order_id:
             from app.modules.commerce.models import Order
+
             try:
                 order_uuid = UUID(order_id)
                 order_status = db.scalar(select(Order.status).where(Order.id == order_uuid))
-                if order_status in {"paid", "confirmed", "processing", "shipped", "delivered", "cancelled", "refund_pending", "refunded"}:
+                if order_status in {
+                    "paid",
+                    "confirmed",
+                    "processing",
+                    "shipped",
+                    "delivered",
+                    "cancelled",
+                    "refund_pending",
+                    "refunded",
+                }:
                     return state  # which is currently _empty_state()
             except ValueError:
                 pass
@@ -194,7 +205,7 @@ def _messages(
                     link=url,
                     caption=_caption(product),
                 ),
-                state,
+                {**state, "selected_product_id": product["id"]},
             )
         )
     return outbound
@@ -581,6 +592,30 @@ def process_customer_commerce_message(
 ) -> list[OutboundMessage]:
     buyer = resolve_or_create_whatsapp_buyer(db, business_id, wa_id)
     previous = load_commerce_state(db, business_id, phone_number_id, wa_id)
+
+    if inbound_message_id:
+        inbound_msg = db.scalar(
+            select(WhatsAppMessage).where(WhatsAppMessage.provider_message_id == inbound_message_id)
+        )
+        if inbound_msg and isinstance(inbound_msg.payload, dict):
+            replied_to_id = inbound_msg.payload.get("replied_to_message_id")
+            if replied_to_id:
+                outbound_msg = db.scalar(
+                    select(WhatsAppMessage).where(
+                        WhatsAppMessage.provider_message_id == replied_to_id,
+                        WhatsAppMessage.direction == "out",
+                        WhatsAppMessage.business_id == business_id,
+                        WhatsAppMessage.phone_number_id == phone_number_id,
+                        WhatsAppMessage.wa_id == wa_id,
+                    )
+                )
+                if outbound_msg and isinstance(outbound_msg.payload, dict):
+                    ctx = outbound_msg.payload.get("commerce_context", {})
+                    if ctx.get("selected_product_id"):
+                        previous["selected_product_id"] = ctx["selected_product_id"]
+                        if ctx.get("selected_variant_id"):
+                            previous["selected_variant_id"] = ctx["selected_variant_id"]
+
     shown_ids = [value for value in previous["shown_product_ids"] if isinstance(value, str)]
 
     if _is_payment_claim(text_body):
@@ -600,36 +635,39 @@ def process_customer_commerce_message(
     if selected is None:
         selected = _semantic_shown_product(db, business_id, text_body, shown_ids)
     if selected is not None:
-        state = {
-            **previous,
-            "route": "product_details",
-            "last_intent": "product_details",
-            "selected_product_id": selected["id"],
-            "shown_variant_ids": [variant["id"] for variant in selected["variants"]],
-            "tool_call": {"name": "get_product", "arguments": {"product_id": selected["id"]}},
-        }
-        _persist_on_inbound(db, business_id, phone_number_id, wa_id, inbound_message_id, state)
-        return _messages(
-            wa_id, _product_text(selected), state, db, business_id, _media([selected], 1)
-        )
+        previous["selected_product_id"] = selected["id"]
+        previous["shown_variant_ids"] = [variant["id"] for variant in selected["variants"]]
 
+    # Deterministic slot extraction (quantity)
+    text_lower = text_body.lower()
+    tokens = set(text_lower.replace(",", "").replace(".", "").split())
+    if "ek hi" in text_lower or "bas ek" in text_lower or tokens & {"1", "ek", "one"}:
+        previous["quantity"] = 1
+    elif tokens & {"2", "do", "two"}:
+        previous["quantity"] = 2
+    elif tokens & {"3", "teen", "three"}:
+        previous["quantity"] = 3
+    elif tokens & {"4", "char", "chaar", "four"}:
+        previous["quantity"] = 4
+    elif tokens & {"5", "paanch", "five"}:
+        previous["quantity"] = 5
+
+    # Deterministic slot extraction (variant)
     selected_id = previous.get("selected_product_id")
     if isinstance(selected_id, str):
         selected_products = product_facts(db, business_id, [selected_id], limit=1)
         if selected_products:
-            variant_res = _variant_followup(selected_products[0], text_body, previous)
-            if variant_res:
-                variant_reply, new_state = variant_res
-                state = {
-                    **new_state,
-                    "route": "variant",
-                    "last_intent": "variant",
-                    "tool_call": None,
-                }
-                _persist_on_inbound(
-                    db, business_id, phone_number_id, wa_id, inbound_message_id, state
-                )
-                return _messages(wa_id, variant_reply, state, db, business_id)
+            product = selected_products[0]
+            for variant in product.get("variants", []):
+                s = str(variant.get("size", "")).lower()
+                c = str(variant.get("color", "")).lower()
+                if (s and s in tokens) or (c and c in tokens):
+                    if s and s in tokens:
+                        previous["selected_size"] = variant.get("size")
+                    if c and c in tokens:
+                        previous["selected_color"] = variant.get("color")
+                    previous["selected_variant_id"] = variant.get("id")
+                    break
 
     stable_message_id = (
         inbound_message_id

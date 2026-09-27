@@ -5,13 +5,13 @@ from app.api.owner_routes import router as owner_router
 from app.api.routes.checkout import router as checkout_router
 from app.api.routes.health import router as health_router
 from app.modules.catalog.routes import router as catalog_router
+from app.modules.early_access.routes import router as early_access_router
 from app.modules.inventory.routes import router as inventory_router
 from app.modules.invoices.routes import router as invoices_router
 from app.modules.payments.router import router as razorpay_router
 from app.modules.payments.routes import router as payments_router
 from app.modules.pricing.routes import router as pricing_router
 from app.modules.runs.router import router as runs_router
-from app.modules.early_access.routes import router as early_access_router
 from app.modules.whatsapp.router import router as whatsapp_router
 
 router = APIRouter()
