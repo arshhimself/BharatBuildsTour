@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Volume2, VolumeX, Play, Pause, Maximize2 } from 'lucide-react';
+import { Volume2, VolumeX, Play, Pause, Maximize2, ExternalLink } from 'lucide-react';
 
 export interface PremiumVideoFrameProps {
   source?: string; // MP4 file path (e.g., "/media/BizMateLaunchVideo.mp4") OR YouTube video ID (e.g., "fZdbSssVUp4")
@@ -12,6 +12,8 @@ export interface PremiumVideoFrameProps {
   label?: string;
   isActive?: boolean;
   poster?: string;
+  youtubeUrl?: string;
+  showYouTubeLink?: boolean;
 }
 
 export function PremiumVideoFrame({
@@ -23,6 +25,8 @@ export function PremiumVideoFrame({
   label = 'BIZMATE PRODUCT',
   isActive = true,
   poster,
+  youtubeUrl,
+  showYouTubeLink = true,
 }: PremiumVideoFrameProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -32,6 +36,15 @@ export function PremiumVideoFrame({
 
   // Auto-detect type if not explicitly provided
   const videoType = type || (mediaSource.endsWith('.mp4') || mediaSource.includes('/') ? 'mp4' : 'youtube');
+
+  // Derive YouTube URL if available
+  const finalYoutubeUrl =
+    youtubeUrl ||
+    (videoType === 'youtube' && mediaSource
+      ? mediaSource.startsWith('http')
+        ? mediaSource
+        : `https://www.youtube.com/watch?v=${mediaSource}`
+      : undefined);
 
   const [isMuted, setIsMuted] = useState(true);
   const isMutedRef = useRef(true);
@@ -157,116 +170,133 @@ export function PremiumVideoFrame({
   }, [isActive, mediaSource, videoType]);
 
   return (
-    <div
-      ref={containerRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => setShowControls(false)}
-      className="group relative w-full overflow-hidden rounded-[28px] border border-white/75 bg-slate-950 shadow-[0_35px_80px_rgba(40,55,100,0.16)] transition-all duration-500"
-    >
-      {/* Soft Ambient Background Glow */}
-      <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 blur-3xl pointer-events-none -z-10" />
+    <>
+      <div
+        ref={containerRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setShowControls(false)}
+        className="group relative w-full overflow-hidden rounded-[28px] border border-white/75 bg-slate-950 shadow-[0_35px_80px_rgba(40,55,100,0.16)] transition-all duration-500"
+      >
+        {/* Soft Ambient Background Glow */}
+        <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 blur-3xl pointer-events-none -z-10" />
 
-      {/* 16:9 Aspect Ratio Frame */}
-      <div className="relative aspect-16/9 w-full bg-slate-950 overflow-hidden flex items-center justify-center">
-        
-        {/* Media Render: Native MP4 or YouTube Embed */}
-        {videoType === 'mp4' ? (
-          <video
-            ref={videoRef}
-            src={mediaSource}
-            poster={poster}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        ) : (
-          <iframe
-            ref={iframeRef}
-            src={`https://www.youtube-nocookie.com/embed/${mediaSource}?autoplay=1&mute=1&controls=0&enablejsapi=1&loop=1&playlist=${mediaSource}&playsinline=1&rel=0&modestbranding=1&title=0&byline=0&portrait=0`}
-            title={title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            onLoad={handleIframeLoad}
-            className="absolute inset-0 h-full w-full border-0 pointer-events-none scale-[1.03]"
-          />
-        )}
+        {/* 16:9 Aspect Ratio Frame */}
+        <div className="relative aspect-16/9 w-full bg-slate-950 overflow-hidden flex items-center justify-center">
 
-        {/* Top Overlay Glass Badge (Category/Eyebrow) */}
-        <div
-          className={`absolute top-4 left-4 right-4 z-20 flex items-start justify-between transition-opacity duration-300 pointer-events-none ${
-            showControls ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/20 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-lg">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              {label}
-            </span>
-          </div>
-        </div>
+          {/* Media Render: Native MP4 or YouTube Embed */}
+          {videoType === 'mp4' ? (
+            <video
+              ref={videoRef}
+              src={mediaSource}
+              poster={poster}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <iframe
+              ref={iframeRef}
+              src={`https://www.youtube-nocookie.com/embed/${mediaSource}?autoplay=1&mute=1&controls=0&enablejsapi=1&loop=1&playlist=${mediaSource}&playsinline=1&rel=0&modestbranding=1&title=0&byline=0&portrait=0`}
+              title={title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              onLoad={handleIframeLoad}
+              className="absolute inset-0 h-full w-full border-0 pointer-events-none scale-[1.03]"
+            />
+          )}
 
-        {/* Bottom Overlay Info & Custom Glass Controls */}
-        <div
-          className={`absolute bottom-0 inset-x-0 z-20 p-4 sm:p-6 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent flex items-end justify-between transition-opacity duration-300 ${
-            showControls ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          {/* Left Text (Hidden on mobile to preserve video-first priority) */}
-          <div className="max-w-[70%] space-y-1 hidden sm:block">
-            <h3 className="text-base sm:text-xl font-extrabold text-white tracking-tight drop-shadow-md">
-              {title}
-            </h3>
-            {subtitle && (
-              <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed drop-shadow-sm line-clamp-2">
-                {subtitle}
-              </p>
-            )}
+          {/* Top Overlay Glass Badge (Category/Eyebrow) */}
+          <div
+            className={`absolute top-4 left-4 right-4 z-20 flex items-start justify-between transition-opacity duration-300 pointer-events-none ${
+              showControls ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/20 text-[10px] font-extrabold uppercase tracking-wider text-white shadow-lg">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                {label}
+              </span>
+            </div>
           </div>
 
-          {/* Right Custom Glass Controls */}
-          <div className="flex items-center gap-2">
-            {/* Play/Pause Button */}
-            <button
-              onClick={togglePlay}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
-              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all cursor-pointer shadow-lg active:scale-95"
-            >
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-white ml-0.5" />}
-            </button>
-
-            {/* Mute/Unmute Button */}
-            <button
-              onClick={toggleMute}
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-              className="flex h-10 px-3.5 items-center gap-2 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all cursor-pointer shadow-lg active:scale-95"
-            >
-              {isMuted ? (
-                <>
-                  <VolumeX className="h-4 w-4 text-amber-300" />
-                  <span className="text-xs font-bold hidden sm:inline">Muted</span>
-                </>
-              ) : (
-                <>
-                  <Volume2 className="h-4 w-4 text-emerald-400" />
-                  <span className="text-xs font-bold hidden sm:inline">Sound On</span>
-                </>
+          {/* Bottom Overlay Info & Custom Glass Controls */}
+          <div
+            className={`absolute bottom-0 inset-x-0 z-20 p-4 sm:p-6 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent flex items-end justify-between transition-opacity duration-300 ${
+              showControls ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            {/* Left Text (Hidden on mobile to preserve video-first priority) */}
+            <div className="max-w-[70%] space-y-1 hidden sm:block">
+              <h3 className="text-base sm:text-xl font-extrabold text-white tracking-tight drop-shadow-md">
+                {title}
+              </h3>
+              {subtitle && (
+                <p className="text-xs sm:text-sm text-slate-300 font-medium leading-relaxed drop-shadow-sm line-clamp-2">
+                  {subtitle}
+                </p>
               )}
-            </button>
+            </div>
 
-            {/* Fullscreen Button */}
-            <button
-              onClick={toggleFullscreen}
-              aria-label="Fullscreen"
-              className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all cursor-pointer shadow-lg active:scale-95"
-            >
-              <Maximize2 className="h-4 w-4" />
-            </button>
+            {/* Right Custom Glass Controls */}
+            <div className="flex items-center gap-2">
+              {/* Play/Pause Button */}
+              <button
+                onClick={togglePlay}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all cursor-pointer shadow-lg active:scale-95"
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-white ml-0.5" />}
+              </button>
+
+              {/* Mute/Unmute Button */}
+              <button
+                onClick={toggleMute}
+                aria-label={isMuted ? 'Unmute' : 'Mute'}
+                className="flex h-10 px-3.5 items-center gap-2 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all cursor-pointer shadow-lg active:scale-95"
+              >
+                {isMuted ? (
+                  <>
+                    <VolumeX className="h-4 w-4 text-amber-300" />
+                    <span className="text-xs font-bold hidden sm:inline">Muted</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="h-4 w-4 text-emerald-400" />
+                    <span className="text-xs font-bold hidden sm:inline">Sound On</span>
+                  </>
+                )}
+              </button>
+
+              {/* Fullscreen Button */}
+              <button
+                onClick={toggleFullscreen}
+                aria-label="Fullscreen"
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 text-white hover:bg-white/30 transition-all cursor-pointer shadow-lg active:scale-95"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        </div>
 
+        </div>
       </div>
-    </div>
+
+      {/* Secondary YouTube Action Link */}
+      {finalYoutubeUrl && showYouTubeLink !== false && (
+        <div className="mt-5 text-center">
+          <a
+            href={finalYoutubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
+          >
+            <span>Watch on YouTube</span>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      )}
+    </>
   );
 }

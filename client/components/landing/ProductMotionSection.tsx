@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Sparkles, ExternalLink } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { PremiumVideoFrame } from '@/components/landing/PremiumVideoFrame';
 
 export function ProductMotionSection() {
@@ -35,24 +35,12 @@ export function ProductMotionSection() {
             <PremiumVideoFrame
               source="/media/BizMateLaunchVideo.mp4"
               type="mp4"
+              youtubeUrl="https://youtu.be/MiKX5bY41Fo?si=TCziFyrW5hzIKnHi"
               title="One conversation. A whole business moving behind it."
               subtitle="See how BizMate turns everyday customer conversations into sales, operations and follow-through."
               label="PRODUCT OVERVIEW"
               isActive={true}
             />
-          </div>
-
-          {/* Secondary YouTube Action Link */}
-          <div className="mt-5 text-center">
-            <a
-              href="https://youtu.be/MiKX5bY41Fo?si=TCziFyrW5hzIKnHi"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
-            >
-              <span>Watch on YouTube</span>
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
           </div>
         </div>
 
