@@ -72,7 +72,12 @@ def manager_chat(
         ]
 
         tools = build_tools(db) if db is not None else []
-        model = ChatOpenAI(model="gpt-4o-mini", api_key=api_key, temperature=0.3)
+        model = ChatOpenAI(
+            model="openai/gpt-4o-mini",
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0.3,
+        )
         agent = create_react_agent(model, tools, prompt=_SYSTEM_PROMPT)
 
         result = agent.invoke({"messages": [*lc_history, HumanMessage(content=message)]})

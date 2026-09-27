@@ -164,7 +164,12 @@ def customer_salesperson_chat(
             for turn in history
         ]
         agent = create_react_agent(
-            ChatOpenAI(model="gpt-4o-mini", api_key=api_key, temperature=0.2),
+            ChatOpenAI(
+                model="openai/gpt-4o-mini",
+                api_key=api_key,
+                base_url="https://openrouter.ai/api/v1",
+                temperature=0.2,
+            ),
             build_commerce_tools(
                 db,
                 business_id,

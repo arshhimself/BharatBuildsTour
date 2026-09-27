@@ -1,0 +1,166 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:ap-south-1:495791792726:task-definition/stockaware-server:11",
+    "containerDefinitions": [
+        {
+            "name": "server",
+            "image": "495791792726.dkr.ecr.ap-south-1.amazonaws.com/stockaware-server:bd77c2de596dd852c1245cc2d7ab5251e6f78cc8",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "POSTGRES_USER",
+                    "value": "stockaware"
+                },
+                {
+                    "name": "INTERNAL_BUSINESS_ID",
+                    "value": ""
+                },
+                {
+                    "name": "WHATSAPP_BIZ_PHONE_NUMBER_ID",
+                    "value": "1353344187842745"
+                },
+                {
+                    "name": "ADMIN_WHATSAPP_NUMBERS",
+                    "value": "918766700429"
+                },
+                {
+                    "name": "POSTGRES_HOST",
+                    "value": "stockaware-db.cxcmqw8iw51v.ap-south-1.rds.amazonaws.com"
+                },
+                {
+                    "name": "ENVIRONMENT",
+                    "value": "production"
+                },
+                {
+                    "name": "WHATSAPP_TEST_PHONE_NUMBER_ID",
+                    "value": "1313207358540995"
+                },
+                {
+                    "name": "POSTGRES_PORT",
+                    "value": "5432"
+                },
+                {
+                    "name": "POSTGRES_DB",
+                    "value": "stockaware"
+                },
+                {
+                    "name": "CORS_ORIGINS",
+                    "value": "[\"http://localhost:3000\",\"https://app.stockaware.vaaani.co.in\"]"
+                },
+                {
+                    "name": "LOG_LEVEL",
+                    "value": "INFO"
+                },
+                {
+                    "name": "WHATSAPP_PHONE_NUMBER_BUSINESS_IDS",
+                    "value": "1353344187842745:ff720599-56e8-53f4-9279-27ae059da37f,1313207358540995:ff720599-56e8-53f4-9279-27ae059da37f"
+                }
+            ],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "secrets": [
+                {
+                    "name": "POSTGRES_PASSWORD",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/postgres_password"
+                },
+                {
+                    "name": "WHATSAPP_BIZ_ACCESS_TOKEN",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/whatsapp_biz_access_token"
+                },
+                {
+                    "name": "WHATSAPP_BIZ_VERIFY_TOKEN",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/whatsapp_biz_verify_token"
+                },
+                {
+                    "name": "WHATSAPP_APP_SECRET",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/whatsapp_app_secret"
+                },
+                {
+                    "name": "WHATSAPP_TEST_APP_SECRET",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/whatsapp_test_app_secret"
+                },
+                {
+                    "name": "WHATSAPP_TEST_ACCESS_TOKEN",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/whatsapp_test_access_token"
+                },
+                {
+                    "name": "WHATSAPP_TEST_VERIFY_TOKEN",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/whatsapp_test_verify_token"
+                },
+                {
+                    "name": "OPENAI_API_KEY",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/openai_api_key"
+                },
+                {
+                    "name": "JWT_SECRET",
+                    "valueFrom": "arn:aws:ssm:ap-south-1:495791792726:parameter/stockaware/jwt_secret"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/stockaware-server",
+                    "awslogs-region": "ap-south-1",
+                    "awslogs-stream-prefix": "server"
+                }
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "stockaware-server",
+    "taskRoleArn": "arn:aws:iam::495791792726:role/stockaware-ecs-task",
+    "executionRoleArn": "arn:aws:iam::495791792726:role/stockaware-ecs-execution",
+    "networkMode": "awsvpc",
+    "revision": 11,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.task-iam-role"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "ecs.capability.secrets.ssm.environment-variables"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "MANAGED_INSTANCES",
+        "FARGATE"
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "registeredAt": "2026-09-20T18:19:33.403000+05:30",
+    "registeredBy": "arn:aws:iam::495791792726:user/arsh"
+}
