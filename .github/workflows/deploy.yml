@@ -47,11 +47,43 @@ jobs:
             ${{ env.ECR_REGISTRY }}/stockaware-client:latest
             ${{ env.ECR_REGISTRY }}/stockaware-client:${{ github.sha }}
 
-      - name: Deploy server service
-        run: aws ecs update-service --cluster $ECS_CLUSTER --service stockaware-server --force-new-deployment
+      - name: Download server task definition
+        run: aws ecs describe-task-definition --task-definition stockaware-server --query taskDefinition > server-task-def.json
 
-      - name: Deploy client service
-        run: aws ecs update-service --cluster $ECS_CLUSTER --service stockaware-client --force-new-deployment
+      - name: Render new server task definition
+        id: render-server
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: server-task-def.json
+          container-name: stockaware-server
+          image: ${{ env.ECR_REGISTRY }}/stockaware-server:${{ github.sha }}
+
+      - name: Deploy server task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-server.outputs.task-definition }}
+          service: stockaware-server
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: false
+
+      - name: Download client task definition
+        run: aws ecs describe-task-definition --task-definition stockaware-client --query taskDefinition > client-task-def.json
+
+      - name: Render new client task definition
+        id: render-client
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: client-task-def.json
+          container-name: stockaware-client
+          image: ${{ env.ECR_REGISTRY }}/stockaware-client:${{ github.sha }}
+
+      - name: Deploy client task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-client.outputs.task-definition }}
+          service: stockaware-client
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: false
 
       - name: Wait for services to stabilize
         run: aws ecs wait services-stable --cluster $ECS_CLUSTER --services stockaware-server stockaware-client
